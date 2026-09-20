@@ -144,6 +144,12 @@ The eidStack module provides a port to this module. The verification module shou
 ### Auth
 Owns app identity/session bootstrap and backend role context.
 
+The backend auth module validates Supabase bearer sessions, looks up the
+application profile through its repository, attaches a typed actor to the
+request, and supplies reusable role guards/decorators. The mobile auth feature
+owns session restoration, sign-in/out, auth-state updates, and safe `/api/auth/me`
+context resolution; it does not own login presentation or navigation.
+
 ### Riders
 Owns operational rider profile and delivery-platform association. It does not own the rider's cryptographic wallet.
 

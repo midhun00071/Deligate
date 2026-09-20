@@ -172,6 +172,18 @@ It verifies Node.js, the repository-pinned pnpm, and Docker; starts or reuses lo
 
 The Expo app is one universal Android, iOS, and web client. Its eventual web dashboards use desktop-appropriate density while native remains touch-first; API clients, auth state, hooks, and domain logic remain shared.
 
+## Authentication
+
+Supabase Auth is the source of application sessions. The Expo client uses only
+publishable Supabase configuration, restores the Supabase session, and resolves
+safe application context from `GET /api/auth/me`. The NestJS API validates the
+Supabase bearer token, resolves the corresponding Deligate profile, and applies
+role authorization server-side. A valid Supabase user without a profile is not
+treated as an application actor.
+
+Riders do not need a Deligate account to receive or use credentials: the
+external organizer-compatible wallet remains the holder runtime.
+
 ## Root Commands
 
 Once the applications are initialized:

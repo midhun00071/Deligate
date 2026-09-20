@@ -61,6 +61,12 @@ Deligate must not duplicate these controls or create a weaker parallel wallet.
 ### Authorization
 NestJS validates the Supabase session and enforces role/object scope. Supabase RLS provides a second boundary for exposed tables.
 
+For C01, the only direct authenticated-client table access is a self-read of
+`profiles`, constrained by `auth.uid() = profiles.id`. There are no client
+profile write policies, so a client cannot elevate its role or move itself to a
+different organization. All business-domain tables remain default-deny for
+direct authenticated access until their feature bundle defines a narrow policy.
+
 Use explicit object checks for:
 - rider organization
 - building organization

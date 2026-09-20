@@ -75,6 +75,16 @@ Organizer-provided/eidStack-compatible holder runtime. It owns holder keys, cred
 ### Deligate API boundary
 Trusted application backend. It validates the Supabase session, authorizes the actor, orchestrates business rules and owns all eidStack secrets.
 
+### Authentication boundary
+
+Supabase Auth issues the only application bearer session. The API validates the
+bearer token with Supabase before resolving `profiles.id = auth.users.id` into a
+typed Deligate actor (`userId`, `profileId`, role, organization context, and
+safe display name). Controllers access that actor through a typed decorator;
+they never accept role, profile, or organization context from request input.
+The Expo client stores its normal Supabase session through the existing
+universal Supabase client and requests safe actor context from the API.
+
 ### Supabase boundary
 Stores application/business state, identities, references, audit events and access policy. It does not replace eidStack cryptographic verification.
 
