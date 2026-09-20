@@ -1,73 +1,104 @@
-# AGENTS.md � Deligate
+# AGENTS.md — Deligate
 
 ## 1. Mission
-
 Deligate is a hackathon application for privacy-preserving delivery-rider verification and temporary building access using eidStack verifiable credentials.
 
 Primary demo flow:
 
-1. Delivery company issues a VerifiedRiderCredential.
-2. Rider holds the credential in a compatible wallet flow.
-3. Building security creates a connectionless proof request.
-4. Rider reviews exactly what is requested and consents.
-5. Backend evaluates cryptographic verification, issuer trust and revocation evidence.
-6. If accepted, the building issues a short-lived TemporaryBuildingAccessCredential linked to the successful verification.
-7. Revoking the rider credential must prevent a later access attempt from being shown as accepted.
+1. Delivery company initiates a `VerifiedRiderCredential` issuance through eidStack.
+2. Deligate displays the eidStack invitation/offer QR or link.
+3. The rider uses the organizer-provided/eidStack-compatible holder wallet to scan, review and accept the credential.
+4. Building security creates a minimal connectionless proof request in Deligate and displays the returned QR/link.
+5. The rider uses the external wallet to review the exact requested claims and consent or deny.
+6. Deligate receives the verification result and separately evaluates issuer trust, revocation evidence and building policy.
+7. If accepted, the building issues a short-lived `TemporaryBuildingAccessCredential` linked to the successful verification.
+8. Revoking the rider credential must prevent a later access attempt from being shown as accepted.
 
 ## 2. Read Order Before Editing
-
-1. AGENTS.md
-2. docs/ARCH.md
-3. docs/MODULES.md
-4. docs/SECURITY.md
-5. docs/EIDSTACK.md
-6. docs/CODEX_BUNDLES.md
-7. docs/HACKATHON_DAY.md
-8. docs/Deligate_Hackathon_Task_Sheet.xlsx
+1. `AGENTS.md`
+2. `ARCH.md`
+3. `MODULES.md`
+4. `SECURITY.md`
+5. `EIDSTACK.md`
+6. `CODEX_BUNDLES.md`
+7. `HACKATHON_DAY.md`
+8. `Deligate_Hackathon_Task_Sheet.xlsx`
 
 ## 3. Source Priority
-
 For eidStack-specific behavior, use this order:
 
 1. Official eidStack docs: https://test.e-idstack.com/docs/
-2. Official eidStack API/module pages referenced in docs/EIDSTACK.md
-3. The supplied eIDStack hackathon walkthrough
+2. Official eidStack API/module pages referenced in `EIDSTACK.md`
+3. Uploaded eIDStack walkthrough supplied for the hackathon
 4. Deligate task sheet and architecture docs
 5. General SSI knowledge only when the above do not define the behavior
 
 Never invent an eidStack endpoint, request field, response field, protocol capability, limitation or status.
 
 ## 4. Technology Stack
-
 - Mobile frontend: Expo React Native + TypeScript
 - Routing: Expo Router
 - Styling: NativeWind / small shared UI primitives
 - Backend: NestJS + TypeScript
 - App database/auth: Supabase Postgres + Supabase Auth
-- Database client: @supabase/supabase-js
+- Database client: `@supabase/supabase-js`
 - SSI platform: eidStack sandbox
-- Validation: Zod at client/shared boundaries; DTO validation on server
+- Holder runtime: organizer-provided/eidStack-compatible external wallet
+- Validation: Zod where appropriate at client/shared boundaries; NestJS DTO validation on server
 - Package manager: pnpm workspaces
-- Monorepo orchestration: Turborepo
 
-Supabase is the application data platform. It is not the source of truth for cryptographic credential validity.
+Supabase is the app data platform. It is not the source of truth for cryptographic credential validity.
 
 ## 5. Architecture Rules
-
+- Deligate's core mobile surfaces are Delivery Admin and Building Security. A Rider companion surface is optional and must remain non-wallet.
 - Mobile talks to Deligate NestJS for business actions.
-- The Expo bundle must never contain the eidStack x-api-key or Supabase service-role key.
-- eidStack calls are server-only.
-- Application modules depend on an EidStackPort, not raw eidStack HTTP details.
-- Use feature-first frontend folders.
-- Use module-first backend folders.
+- The Expo bundle must never contain the eidStack `x-api-key` or Supabase server secret/service-role material.
+- eidStack calls are server-only through the `eidstack` backend module.
+- Application modules depend on an `EidStackPort`, not raw HTTP details.
+- Use feature-first frontend folders and module-first backend folders.
 - Route files are thin composition only.
 - Shared components contain no feature-specific business logic.
 - Domain rules must not import React, HTTP clients, Supabase clients or eidStack transport code.
 
-## 6. File-Size / Responsibility Guardrails
+## 6. Holder Wallet Boundary — Non-Negotiable
+Deligate does **not** implement an SSI holder wallet unless the official hackathon requirements explicitly change.
 
-These are review triggers, not arbitrary hard limits.
+The external holder wallet is responsible for:
+- holder DID/key management
+- secure credential storage
+- wallet PIN/biometric controls
+- wallet backup/restore
+- scanning issuance/proof QR codes
+- credential acceptance
+- requested-claim review and consent
+- proof/credential presentation
+- wallet-side cryptographic operations
 
+Deligate may:
+- display eidStack-returned issuance or proof-request QR codes/links
+- show instructions for using the external wallet
+- reconcile server-side workflow status
+- show privacy-safe application status/history
+
+Deligate must not:
+- store holder private keys or wallet backups
+- store raw verifiable credentials or raw proof presentations unless an explicit protected requirement is introduced
+- implement a custom DIDComm agent or AnonCreds wallet
+- recreate the holder consent/proof-selection screens already owned by the wallet
+- claim that an app-side Rider status screen is the cryptographic wallet
+
+## 7. File-Size / Responsibility Guardrails
+All hand-written project files must remain easy to review.
+
+**Global rule:**
+- target: **300 lines or fewer per hand-written file**
+- hard review limit: **400 lines**
+- if a file approaches 300 lines, split it by real responsibility before adding substantial behavior
+- a hand-written file over 400 lines is not complete until it is refactored or an explicit architectural exception is documented
+
+Generated files, lockfiles, vendored code and an atomic database migration that cannot be safely split are excluded from the hard limit.
+
+Existing tighter targets remain preferred:
 - Expo route: target <= 80 LOC
 - Screen composition: target <= 160 LOC
 - Reusable component: target <= 150 LOC
@@ -76,170 +107,123 @@ These are review triggers, not arbitrary hard limits.
 - DTO/schema file: target <= 100 LOC
 - Application/domain service: target <= 200 LOC
 - External adapter: target <= 220 LOC
-- Migration by concern: target <= 250 LOC
 - Test file: target <= 250 LOC
 
-If a file exceeds a guardrail, split by responsibility rather than by arbitrary line count.
+Do not split files cosmetically. Split along real boundaries such as controller/service/repository, screen/components/hooks, adapter/client/mapper, schemas/types or separate domain policies.
 
-## 7. Non-Negotiable Integrity Rules
-
+## 8. Non-Negotiable Integrity Rules
 ### No hidden fallback
+Deligate has explicit adapter modes:
 
-Deligate has explicit integration modes:
+- `mock`: local/demo development only
+- `live`: real eidStack sandbox calls
 
-- mock: local/demo development only
-- live: real eidStack sandbox calls
+A failed live call must remain failed. Do not catch a live failure and return mock success, cached green status, hard-coded credential validity or a fabricated invitation.
 
-A failed live call must remain failed.
-
-Do not catch a live eidStack failure and return:
-
-- mock success
-- cached green status
-- hard-coded credential validity
-- fabricated QR/invitation data
-- fabricated verification result
-
-Mock mode must be visibly identifiable in diagnostics.
+Mock mode must be visibly identifiable in diagnostics and must be blocked in any production/live configuration.
 
 ### No fake cryptographic truth
+Never treat any Supabase field such as `status = ACTIVE` as proof that a VC is cryptographically valid, trusted or not revoked.
 
-Never treat a Supabase value such as:
-
-status = ACTIVE
-
-as proof that a credential is:
-
-- cryptographically valid
-- trusted
-- unrevoked
-
-Supabase may store application references and workflow state.
-
-Actual live credential/proof validity comes from eidStack.
+Supabase may store application references and last-known workflow state. Actual live verification comes from eidStack.
 
 ### No test weakening
+Do not delete, skip, loosen or rewrite a failing security/behavior test solely to make a bundle pass. Fix the implementation or record the blocker.
 
-Do not delete, skip, loosen or rewrite a failing security or behavior test solely to make a task pass.
-
-Fix the implementation or record the blocker.
-
-## 8. Privacy Rules
-
-Deligate should not require or store:
-
+## 9. Privacy Rules
+Deligate does not need or store:
 - full Emirates ID number
 - Emirates ID image
-- rider home address
+- home address
+- holder wallet private keys/recovery material
 - raw proof presentations
-- private wallet keys/secrets
+- raw credential payloads by default
 
-Request only the minimum attributes necessary for the building-access decision.
+Request the minimum attributes necessary for the access decision.
 
-The rider consent screen must show the exact requested attributes/predicates and purpose before sharing.
+The external wallet, not Deligate, owns the holder's final consent screen. Deligate must ensure the proof request it creates contains only the approved attributes/predicates and a clear purpose/comment where supported.
 
-## 9. Authorization Rules
-
+## 10. Authorization Rules
 Roles:
+- `DELIVERY_ADMIN`
+- `RIDER` — optional Deligate companion role; not the cryptographic holder wallet
+- `BUILDING_SECURITY`
 
-- DELIVERY_ADMIN
-- RIDER
-- BUILDING_SECURITY
+Frontend role checks are UX only. NestJS authorization and Supabase RLS are authoritative.
 
-Frontend role checks are UX only.
+Every object read/write must be scoped to the relevant organization, building or rider. Add negative direct-request tests.
 
-NestJS authorization and Supabase RLS are authoritative.
+## 11. QR / Invitation / DIDComm Rules
+- Deligate renders QR codes from eidStack-returned invitation/request data; it does not invent invitation URLs.
+- The organizer-compatible wallet is the component that scans the issuance/proof QR in the core demo.
+- DIDComm is a secure agent/wallet messaging protocol used by applicable flows; it is **not** the QR-code generator.
+- OpenID4VCI/OpenID4VP are separate protocol families and must not be described as DIDComm.
+- Bound invitation length and validate expected server-side shape before rendering/copying.
+- Never auto-open arbitrary external URLs.
+- Never log complete invitation payloads; use an explicitly redacted diagnostic representation if needed.
 
-Every object read/write must be scoped to the correct:
+## 12. eidStack Rules
+Current documented integration base:
 
-- organization
-- rider
-- building
-- access session
+`https://test.e-idstack.com/api/v1`
 
-Add negative authorization tests where applicable.
+Every request requires `x-api-key`. Tenant-scoped calls also require `x-tenant-id`.
 
-## 10. QR / Deep-Link Rules
+Core Deligate flow should prefer documented connectionless/OOB credential and proof flows unless live sandbox testing establishes another required documented path.
 
-- Never auto-open arbitrary scanned URLs.
-- Apply payload-length limits.
-- Allow only known flow/scheme patterns.
-- Reject malformed/unknown payloads safely.
-- Deduplicate repeated camera scans.
-- Never log full invitation payloads unless explicitly redacted.
-
-## 11. eidStack Rules
-
-Current integration base:
-
-https://test.e-idstack.com/api/v1
-
-Every request requires:
-
-x-api-key
-
-Tenant-scoped calls also require:
-
-x-tenant-id
-
-Core Deligate flows should prefer documented connectionless/OOB credential and proof workflows.
-
-Revocation support must be decided when creating the rider credential definition.
-
-Do not assume revocation can be enabled later.
+Revocation support must be decided when creating the rider credential definition. Do not assume it can be enabled later.
 
 Credential revocation and Trust Registry entity status are separate security concepts.
 
 Linked issuance may use documented fields such as:
+- `linkGroupId`
+- `linkedToCredentialExchangeId`
+- `linkType`
+- `sourceVerificationId`
 
-- linkGroupId
-- linkedToCredentialExchangeId
-- linkType
-- sourceVerificationId
+See `EIDSTACK.md` for endpoint details.
 
-See docs/EIDSTACK.md for integration details.
-
-## 12. Codex Bundle Execution Protocol
-
-Execute work by bundle from the task sheet, not by randomly selecting isolated tasks.
+## 13. Codex Bundle Execution Protocol
+Execute work by bundle from the `Codex Execution Bundles` sheet, not by randomly selecting individual tasks.
 
 For each bundle:
+1. Read the included task rows and prerequisites.
+2. Confirm the repository is clean or record existing user changes before editing.
+3. Implement only the bundle's authorized combined purpose.
+4. Respect the 300-line target / 400-line hard review limit for hand-written files.
+5. Run the listed validation boundary.
+6. Review complete changed files, not only diffs/summaries.
+7. Do not commit unrelated edits.
+8. Record task-specific closure evidence.
+9. Stop/split if the bundle's scope-guard trigger is hit.
 
-1. Read included task rows and prerequisites.
-2. Check existing repository changes before editing.
-3. Implement only the bundle's authorized purpose.
-4. Run the listed validation boundary.
-5. Review complete changed files, not only summaries.
-6. Do not modify unrelated areas.
-7. Record task-specific closure evidence.
-8. Stop or split if the bundle scope guard is hit.
+Never let Codex implement a custom holder wallet merely because generic SSI patterns suggest one.
 
-Hackathon-day live bundles remain blocked until authorized eidStack API access and a compatible holder-wallet path are available.
+Hackathon-day live bundles `H01` and `H02` remain blocked until authorized API access and the organizer-compatible holder-wallet path are available.
 
-## 13. Definition of Done
-
+## 14. Definition of Done for Any Task
 A task is complete only when:
+- requested behavior exists,
+- failure behavior is truthful,
+- authorization/data scope is correct,
+- tests/validation listed in the task row pass,
+- no secret is exposed,
+- hand-written files satisfy the file-size rule or have an explicit approved exception,
+- documentation is updated if behavior/architecture changed,
+- no unrelated placeholder or mock has been added to production/live behavior.
 
-- requested behavior exists
-- failure behavior is truthful
-- authorization/data scope is correct
-- relevant tests and validation pass
-- no secret is exposed
-- documentation is updated if architecture or behavior changes
-- no unrelated placeholder or mock has been added to live behavior
+## 15. Commands to Preserve
+Use stable root scripts once created, for example:
 
-## 14. Root Commands
+```bash
+pnpm install
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:security
+pnpm test:e2e:mock
+pnpm dev:api
+pnpm dev:mobile
+```
 
-Expected stable root commands:
-
-    pnpm install
-    pnpm dev
-    pnpm dev:api
-    pnpm dev:mobile
-    pnpm lint
-    pnpm typecheck
-    pnpm test
-    pnpm build
-    pnpm check
-
-If command names change, update `AGENTS.md` and `README.md` together.
+If the actual repo chooses different names, update this file and the README together.
