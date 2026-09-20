@@ -1,0 +1,8 @@
+node_modules/
+.pnpm-store/
+.expo/
+.turbo/
+dist/
+build/
+coverage/
+pnpm-lock.yaml

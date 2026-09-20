@@ -1,0 +1,30 @@
+{
+  "name": "deligate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-preserving delivery rider verification and temporary building access powered by verifiable credentials and eidStack.",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:mobile": "pnpm --filter @deligate/mobile dev",
+    "dev:api": "pnpm --filter @deligate/api dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.8",
+    "turbo": "^2.11.2",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.70.0"
+  }
+}
