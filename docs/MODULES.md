@@ -95,6 +95,8 @@ Those responsibilities belong to the organizer-provided/eidStack-compatible hold
 
 ## 3. Frontend Feature Pattern
 
+The same feature API, hooks, state, and domain contracts serve Android, iOS, and web. A `.web.tsx` presentation counterpart is allowed only where desktop interaction or layout materially differs; it must compose the same feature layer rather than duplicate it.
+
 A feature owns only what it needs:
 
 ```text

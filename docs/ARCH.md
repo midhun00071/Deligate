@@ -58,6 +58,12 @@ flowchart TB
 
 The holder wallet is an external dependency, not a Deligate feature module.
 
+## 1.1 Universal Client Foundation
+
+`apps/mobile` is Deligate's single Expo client for Android, iOS, and responsive web. Shared domain types, validation, API clients, services, hooks, authentication state, data fetching, and state transitions stay platform-neutral. Platform files are reserved for meaningful presentation or interaction differences; they must not fork business logic.
+
+Web surfaces will use desktop-first dashboard density with keyboard/mouse-friendly navigation and narrow-browser fallback. Native surfaces remain touch-first, with denser tablet presentation only where useful. No separate web application is part of the architecture.
+
 ## 2. Trust Boundaries
 
 ### Deligate mobile boundary

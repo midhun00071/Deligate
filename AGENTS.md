@@ -47,6 +47,8 @@ Never invent an eidStack endpoint, request field, response field, protocol capab
 - Validation: Zod where appropriate at client/shared boundaries; NestJS DTO validation on server
 - Package manager: pnpm workspaces
 
+`apps/mobile` is the single universal Expo client for Android, iOS, and web. Platform-specific files are presentation-only exceptions; API clients, services, hooks, validation, state transitions, and authentication state stay shared. Web should be desktop-dashboard appropriate and native touch-first.
+
 Supabase is the app data platform. It is not the source of truth for cryptographic credential validity.
 
 ## 5. Architecture Rules
@@ -224,6 +226,10 @@ pnpm test:security
 pnpm test:e2e:mock
 pnpm dev:api
 pnpm dev:mobile
+pnpm dev:web
+pnpm build:web
 ```
+
+On Windows, `run.cmd` is the normal local-development entry point and `run.cmd --check` runs the non-watching foundation validation suite. The runner must preserve local data and existing environment values; it must never reset Supabase as ordinary startup behavior.
 
 If the actual repo chooses different names, update this file and the README together.

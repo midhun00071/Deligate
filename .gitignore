@@ -59,6 +59,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Local human-review archives
+review-packs/
+
 # Editors
 .idea/
 .vscode/*

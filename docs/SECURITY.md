@@ -40,6 +40,12 @@ Holder private keys, wallet backups and raw credential storage are intentionally
 - do not print secrets on startup errors
 - no secrets in screenshots, task sheets, audit rows or test fixtures
 
+### Browser origins
+- the API uses an explicit comma-separated `CORS_ORIGINS` allow-list
+- development has a small local Expo-origin default when no allow-list is supplied
+- production with no configured origin denies cross-origin browser access rather than enabling a wildcard
+- cookie credentials remain disabled unless a future authenticated browser design requires and reviews them
+
 ### External holder wallet
 The organizer-provided/eidStack-compatible wallet owns:
 - holder DIDs/keys

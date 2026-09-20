@@ -160,6 +160,18 @@ Live mode must be enabled explicitly after authorized sandbox credentials are pr
 
 A failed live eidStack request must never silently fall back to mock success.
 
+## Local Development
+
+On Windows, use the single normal entry point:
+
+    run.cmd
+
+It verifies Node.js, the repository-pinned pnpm, and Docker; starts or reuses local Supabase without resetting data; applies pending local migrations; and starts the NestJS and Expo development servers. It creates `.env` files from their examples only when absent, then fills blank template values or replaces known local defaults. Existing `EIDSTACK_*`, custom values, and unrelated settings are never changed.
+
+`run.cmd` detects an active LAN IPv4 address for Expo's public API and Supabase URLs, so a device on the same network can connect. If detection is not reliable it safely uses loopback and warns instead. Use `run.cmd --check` for the non-watching validation suite.
+
+The Expo app is one universal Android, iOS, and web client. Its eventual web dashboards use desktop-appropriate density while native remains touch-first; API clients, auth state, hooks, and domain logic remain shared.
+
 ## Root Commands
 
 Once the applications are initialized:
@@ -168,10 +180,12 @@ Once the applications are initialized:
     pnpm dev
     pnpm dev:api
     pnpm dev:mobile
+    pnpm dev:web
     pnpm lint
     pnpm typecheck
     pnpm test
     pnpm build
+    pnpm build:web
     pnpm check
 
 ## Planning

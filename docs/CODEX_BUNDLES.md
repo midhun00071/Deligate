@@ -11,7 +11,7 @@ The authoritative bundle list is the `Codex Execution Bundles` worksheet.
 |---:|---|---|
 | 0 | C00 | Foundation and engineering guardrails |
 | 1 | C01 | Supabase data and authentication core |
-| 2 | C02 | Expo shell, shared UI and QR/invitation rendering primitives |
+| 2 | C02 | Universal Expo shell, responsive web/native UI system, navigation, and QR/invitation rendering primitives |
 | 3 | C03 | eidStack contract, mock and live-client skeleton |
 | 4 | C04 | Delivery Admin issuer slice |
 | 5 | C05 | Optional Rider companion/status — **deferred by default; not a holder wallet** |
@@ -23,6 +23,8 @@ The authoritative bundle list is the `Codex Execution Bundles` worksheet.
 | 11 | H02 | Live E2E integration with organizer holder wallet and demo freeze — external gate |
 
 C06 does not depend on C05. The core demo can proceed without any Deligate Rider companion UI because the organizer-compatible wallet is the holder runtime.
+
+C02 acceptance covers Delivery Admin on desktop web, narrow browser, and Android/iOS; Building Security at a desktop security desk and on mobile/tablet; and shared auth, API/service layer, types, hooks, and business logic. QR presentation must work on desktop and native. C02 does not add holder-wallet functionality.
 
 ## 3. Bundle Prompt Pattern
 When asking Codex to execute a bundle, use a prompt like:
