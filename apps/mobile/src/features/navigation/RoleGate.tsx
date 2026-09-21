@@ -1,11 +1,20 @@
+import type { AppRole } from '@deligate/types';
 import { Redirect, type Href } from 'expo-router';
+import type { ReactNode } from 'react';
 
 import { ErrorState, LoadingState } from '@/components/states';
 import { Screen } from '@/components/ui';
 import { useAuth } from '@/features/auth';
-import { roleHomePath } from '@/features/navigation';
 
-export default function IndexRoute() {
+import { roleHomePath } from './paths';
+import { canAccessRole } from './roleAccess';
+
+interface RoleGateProps {
+  role: AppRole;
+  children: ReactNode;
+}
+
+export function RoleGate({ role, children }: RoleGateProps) {
   const auth = useAuth();
 
   if (auth.status === 'loading') {
@@ -28,9 +37,13 @@ export default function IndexRoute() {
     );
   }
 
-  if (auth.actor) {
+  if (!auth.actor || auth.status === 'unauthenticated') {
+    return <Redirect href={'/sign-in' as Href} />;
+  }
+
+  if (!canAccessRole(auth.actor.role, role)) {
     return <Redirect href={roleHomePath[auth.actor.role] as Href} />;
   }
 
-  return <Redirect href={'/sign-in' as Href} />;
+  return <>{children}</>;
 }

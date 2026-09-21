@@ -170,14 +170,26 @@ function Ensure-LocalEnvironmentFiles {
   Remove-Utf8Bom $mobileEnv
 }
 
-function Set-LocalEnvironmentValue([string] $Path, [string] $Key, [string] $Value, [string[]] $ReplaceableValues = @()) {
+function Set-LocalEnvironmentValue(
+  [string] $Path,
+  [string] $Key,
+  [string] $Value,
+  [string[]] $ReplaceableValues = @(),
+  [switch] $ManagedByDevelopmentRunner
+) {
   $lines = [System.Collections.Generic.List[string]](Get-Content -LiteralPath $Path)
   $expression = "^(?<prefix>\s*$([regex]::Escape($Key))\s*=)(?<value>.*)$"
   for ($index = 0; $index -lt $lines.Count; $index++) {
     $match = [regex]::Match($lines[$index], $expression)
     if (-not $match.Success) { continue }
     $currentValue = $match.Groups['value'].Value.Trim()
-    if ($currentValue -and $currentValue -notin $ReplaceableValues) { return }
+    if (
+      $currentValue -and
+      -not $ManagedByDevelopmentRunner -and
+      $currentValue -notin $ReplaceableValues
+    ) {
+      return
+    }
     $lines[$index] = "$($match.Groups['prefix'].Value)$Value"
     [IO.File]::WriteAllLines($Path, $lines, [Text.UTF8Encoding]::new($false))
     return
@@ -248,9 +260,9 @@ function Set-DevelopmentEnvironment($Status) {
   Set-LocalEnvironmentValue $rootEnv 'SUPABASE_URL' $apiUrl @('http://127.0.0.1:54321')
   Set-LocalEnvironmentValue $rootEnv 'SUPABASE_PUBLISHABLE_KEY' $publishableKey
   Set-LocalEnvironmentValue $rootEnv 'SUPABASE_SECRET_KEY' $secretKey
-  Set-LocalEnvironmentValue $rootEnv 'CORS_ORIGINS' "http://localhost:8081,http://127.0.0.1:8081,http://${clientHost}:8081" @('http://localhost:8081,http://127.0.0.1:8081')
-  Set-LocalEnvironmentValue $mobileEnv 'EXPO_PUBLIC_API_URL' "http://${clientHost}:3000" @('http://127.0.0.1:3000')
-  Set-LocalEnvironmentValue $mobileEnv 'EXPO_PUBLIC_SUPABASE_URL' ($apiUrl -replace '127\.0\.0\.1', $clientHost) @('http://127.0.0.1:54321')
+  Set-LocalEnvironmentValue $rootEnv 'CORS_ORIGINS' "http://localhost:8081,http://127.0.0.1:8081,http://${clientHost}:8081" -ManagedByDevelopmentRunner
+  Set-LocalEnvironmentValue $mobileEnv 'EXPO_PUBLIC_API_URL' "http://${clientHost}:3000" -ManagedByDevelopmentRunner
+  Set-LocalEnvironmentValue $mobileEnv 'EXPO_PUBLIC_SUPABASE_URL' ($apiUrl -replace '127\.0\.0\.1', $clientHost) -ManagedByDevelopmentRunner
   Set-LocalEnvironmentValue $mobileEnv 'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY' $publishableKey
 }
 
