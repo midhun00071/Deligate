@@ -1,4 +1,4 @@
-import type { RiderClaims } from '../types/eidstack.types';
+import type { RiderClaims, TemporaryAccessClaims } from '../types/eidstack.types';
 import { LiveEidStackClient } from './live-client';
 
 /** Verified against official docs and Swagger on 2026-09-21.
@@ -58,6 +58,29 @@ export class IssuerClient {
     return this.http.request(
       'GET',
       `/issuance/credentials/${encodeURIComponent(id)}/revocation-status`,
+    );
+  }
+
+  createTemporaryAccessOffer(
+    schemaId: string,
+    credentialDefinitionId: string,
+    attributes: TemporaryAccessClaims,
+    tenantId: string,
+  ) {
+    return this.http.request(
+      'POST',
+      '/issuance/oob-offer',
+      {
+        schemaId,
+        credentialDefinitionId,
+        attributes,
+        subjectAttribute: 'accessId',
+        useConnection: false,
+        autoAcceptCredential: false,
+        comment: 'Temporary building access. Review and accept in your holder wallet.',
+        category: 'access',
+      },
+      tenantId,
     );
   }
 }

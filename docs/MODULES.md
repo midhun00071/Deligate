@@ -176,8 +176,8 @@ Owns privacy-safe immutable application event records.
 
 ### eidStack
 Owns all server-side HTTP integration and translation to application-domain results.
-Macro A keeps the narrow issuer port/client/adapters in the existing `packages/eidstack`
-package. Nest `modules/eidstack` supplies configuration and dependency injection.
+The narrow issuer/verifier/access port and its adapters remain in `packages/eidstack`.
+Nest `modules/eidstack` supplies configuration and dependency injection.
 `modules/riders` owns the protected issuer HTTP routes, while `modules/credentials`
 owns orchestration, references and ephemeral invitation retention. Both shared runtime
 packages (`eidstack`, `validation`) compile before the API; Expo imports validation only.

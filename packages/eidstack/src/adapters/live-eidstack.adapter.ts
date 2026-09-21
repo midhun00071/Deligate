@@ -2,6 +2,7 @@ import type { EidStackConfig } from '../config';
 import { EidStackError } from '../errors';
 import { IssuerClient } from '../live/issuer-client';
 import { LiveEidStackClient } from '../live/live-client';
+import { VerificationClient } from '../live/verification-client';
 import type { EidStackPort } from '../ports/eidstack.port';
 import type {
   ExchangeReference,
@@ -9,16 +10,24 @@ import type {
   IssuanceResult,
   IssuerState,
   IssuerTechnicalStatus,
+  IssueTemporaryAccessInput,
+  ProofRequestResult,
+  ProofStatusResult,
+  RiderProofRequest,
+  TrustCheckResult,
 } from '../types/eidstack.types';
 
 export class LiveEidStackAdapter implements EidStackPort {
   private readonly client: IssuerClient;
+  private readonly verifier: VerificationClient;
 
   constructor(
     private readonly config: EidStackConfig,
     transport: typeof fetch = fetch,
   ) {
-    this.client = new IssuerClient(new LiveEidStackClient(config, transport));
+    const client = new LiveEidStackClient(config, transport);
+    this.client = new IssuerClient(client);
+    this.verifier = new VerificationClient(client, config.verificationTenantId);
   }
 
   technicalStatus(): IssuerTechnicalStatus {
@@ -63,5 +72,36 @@ export class LiveEidStackAdapter implements EidStackPort {
     if (this.config.revocationSupported !== true) throw new EidStackError('REVOCATION_UNAVAILABLE');
     // Successful envelope confirms the command, not a fresh ledger-status read.
     await this.client.revoke(id);
+  }
+
+  createRiderProofRequest(_input: RiderProofRequest): Promise<ProofRequestResult> {
+    this.assertVerificationReady();
+  }
+
+  getProofStatus(_proofRecordId: string): Promise<ProofStatusResult> {
+    this.assertVerificationReady();
+  }
+
+  checkIssuerTrust(_input: { did: string; schemaId?: string }): Promise<TrustCheckResult> {
+    this.assertVerificationReady();
+  }
+
+  issueTemporaryAccessCredential(_input: IssueTemporaryAccessInput): Promise<IssuanceResult> {
+    if (!this.config.accessSchemaId || !this.config.accessCredentialDefinitionId)
+      throw new EidStackError('RESOURCES_UNAVAILABLE');
+    throw new EidStackError('CONTRACT_UNVERIFIED');
+  }
+
+  private assertVerificationReady(): never {
+    if (
+      !this.config.apiKey ||
+      !this.config.tenantId ||
+      !this.config.verificationTenantId ||
+      !this.config.credentialDefinitionId
+    )
+      throw new EidStackError('CONFIGURATION_UNAVAILABLE');
+    // Endpoint construction is tested on VerificationClient, but invitations and evidence
+    // fields have no authoritative response schema. Do not create orphan proof records.
+    throw new EidStackError('CONTRACT_UNVERIFIED');
   }
 }

@@ -8,6 +8,9 @@ export interface EidStackConfig extends IssuerReferences {
   tenantId: string;
   timeoutMs: number;
   organizationId: string;
+  verificationTenantId: string;
+  accessSchemaId: string;
+  accessCredentialDefinitionId: string;
 }
 
 export function readEidStackConfig(env: Record<string, string | undefined>): EidStackConfig {
@@ -33,7 +36,11 @@ export function readEidStackConfig(env: Record<string, string | undefined>): Eid
   const revocation = env.EIDSTACK_RIDER_REVOCATION_SUPPORTED;
   if (revocation && !['true', 'false'].includes(revocation))
     throw new EidStackError('CONFIGURATION_UNAVAILABLE');
-  for (const key of ['EIDSTACK_API_KEY', 'EIDSTACK_DELIVERY_TENANT_ID']) {
+  for (const key of [
+    'EIDSTACK_API_KEY',
+    'EIDSTACK_DELIVERY_TENANT_ID',
+    'EIDSTACK_BUILDING_TENANT_ID',
+  ]) {
     if (/[\r\n]/.test(env[key] ?? '')) throw new EidStackError('CONFIGURATION_UNAVAILABLE');
   }
   return {
@@ -43,8 +50,11 @@ export function readEidStackConfig(env: Record<string, string | undefined>): Eid
     apiKey: env.EIDSTACK_API_KEY ?? '',
     tenantId: env.EIDSTACK_DELIVERY_TENANT_ID ?? '',
     organizationId: env.EIDSTACK_DELIVERY_ORGANIZATION_ID ?? '',
+    verificationTenantId: env.EIDSTACK_BUILDING_TENANT_ID ?? '',
     schemaId: env.EIDSTACK_RIDER_SCHEMA_ID ?? '',
     credentialDefinitionId: env.EIDSTACK_RIDER_CREDENTIAL_DEFINITION_ID ?? '',
     revocationSupported: revocation ? revocation === 'true' : null,
+    accessSchemaId: env.EIDSTACK_ACCESS_SCHEMA_ID ?? '',
+    accessCredentialDefinitionId: env.EIDSTACK_ACCESS_CREDENTIAL_DEFINITION_ID ?? '',
   };
 }

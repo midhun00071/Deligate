@@ -43,3 +43,50 @@ export interface IssuerTechnicalStatus {
   revocationSupported: boolean | null;
   responseContractVerified: boolean;
 }
+
+export type ProofState = 'PENDING' | 'VERIFIED' | 'DECLINED' | 'EXPIRED';
+export type RevocationState = 'NOT_REVOKED' | 'REVOKED' | 'UNKNOWN';
+export type TrustState = 'TRUSTED' | 'UNTRUSTED' | 'UNKNOWN';
+
+export interface RiderProofRequest {
+  requestId: string;
+  credentialDefinitionId: string;
+  attributes: Array<{ name: 'riderId' | 'deliveryCompany' | 'riderStatus' }>;
+  comment: string;
+}
+
+export interface ProofRequestResult {
+  proofRecordId: string;
+  invitation: string;
+  source: EidStackMode;
+}
+
+/** Deligate's normalized evidence; never contains a raw presentation or credential. */
+export interface ProofStatusResult {
+  state: ProofState;
+  cryptographicVerification: 'PASS' | 'FAIL' | 'PENDING';
+  revocation: RevocationState;
+  issuerDid: string | null;
+  disclosedAttributes?: {
+    riderId: string;
+    deliveryCompany: string;
+    riderStatus: string;
+  };
+}
+
+export interface TrustCheckResult {
+  state: TrustState;
+}
+
+export interface TemporaryAccessClaims {
+  accessId: string;
+  buildingId: string;
+  accessScope: string;
+  validFrom: string;
+  validUntil: string;
+}
+
+export interface IssueTemporaryAccessInput {
+  requestId: string;
+  claims: TemporaryAccessClaims;
+}

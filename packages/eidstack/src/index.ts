@@ -7,3 +7,4 @@ export { LiveEidStackAdapter } from './adapters/live-eidstack.adapter';
 export { MockEidStackAdapter } from './adapters/mock-eidstack.adapter';
 export { LiveEidStackClient } from './live/live-client';
 export { IssuerClient } from './live/issuer-client';
+export { VerificationClient } from './live/verification-client';

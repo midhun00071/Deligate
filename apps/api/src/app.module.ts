@@ -5,6 +5,8 @@ import { SupabaseModule } from './infrastructure/supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { RiderModule } from './modules/riders/rider.module';
+import { VerificationModule } from './modules/verification/verification.module';
+import { AccessModule } from './modules/access/access.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { RiderModule } from './modules/riders/rider.module';
     AuthModule,
     HealthModule,
     RiderModule,
+    VerificationModule,
+    AccessModule,
   ],
 })
 export class AppModule {}

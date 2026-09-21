@@ -6,12 +6,14 @@ import {
   MockEidStackAdapter,
   readEidStackConfig,
   validateIssuerInvitation,
+  VerificationClient,
 } from '@deligate/eidstack';
 
 const config = readEidStackConfig({
   EIDSTACK_MODE: 'live',
   EIDSTACK_API_KEY: 'test-only-key',
-  EIDSTACK_DELIVERY_TENANT_ID: 'tenant-a',
+  EIDSTACK_DELIVERY_TENANT_ID: 'delivery-tenant-test',
+  EIDSTACK_BUILDING_TENANT_ID: 'building-tenant-test',
   EIDSTACK_DELIVERY_ORGANIZATION_ID: 'org-a',
   EIDSTACK_RIDER_SCHEMA_ID: 'schema-a',
   EIDSTACK_RIDER_CREDENTIAL_DEFINITION_ID: 'definition-a',
@@ -44,7 +46,7 @@ describe('documented live issuer request contracts', () => {
       redirect: 'error',
       headers: {
         'x-api-key': 'test-only-key',
-        'x-tenant-id': 'tenant-a',
+        'x-tenant-id': 'delivery-tenant-test',
         'Content-Type': 'application/json',
       },
     });
@@ -92,7 +94,7 @@ describe('documented live issuer request contracts', () => {
       [`${config.baseUrl}/issuance/credentials/exchange%2Fa/revocation-status`, 'GET'],
     ]);
     for (const [, init] of transport.mock.calls)
-      expect(init?.headers).toMatchObject({ 'x-tenant-id': 'tenant-a' });
+      expect(init?.headers).toMatchObject({ 'x-tenant-id': 'delivery-tenant-test' });
   });
 
   it.each([400, 401, 500, 503])(
@@ -213,6 +215,102 @@ describe('mock and invitation boundary', () => {
       { EIDSTACK_MODE: 'mock', APP_ENV: 'live' },
     ])
       expect(() => readEidStackConfig(env)).toThrow(EidStackError);
+  });
+});
+
+describe('documented live verification request contracts', () => {
+  let transport: jest.MockedFunction<typeof fetch>;
+  let client: VerificationClient;
+  beforeEach(() => {
+    transport = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockImplementation(() => Promise.resolve(Response.json({ success: true, data: {} })));
+    client = new VerificationClient(
+      new LiveEidStackClient(config, transport),
+      config.verificationTenantId,
+    );
+  });
+
+  it('uses documented proof paths, minimal attributes, and server-only tenant headers', async () => {
+    await client.createProofRequest({
+      credDefId: 'definition-a',
+      attributes: [{ name: 'riderId' }, { name: 'deliveryCompany' }, { name: 'riderStatus' }],
+      comment: 'Confirm active delivery-rider status for temporary building access.',
+    });
+    await client.proofStatus('proof/a');
+    await client.trustCheck({ did: 'did:example:issuer', schemaId: 'schema/a' });
+    expect(transport.mock.calls.map(([url, init]) => [url, init?.method])).toEqual([
+      [`${config.baseUrl}/verification/createproofRequest`, 'POST'],
+      [`${config.baseUrl}/verification/proofStatus?proofRecordId=proof%2Fa`, 'GET'],
+      [
+        `${config.baseUrl}/trust-registry/check?did=did%3Aexample%3Aissuer&schemaId=schema%2Fa`,
+        'GET',
+      ],
+    ]);
+    expect(parseBody(transport.mock.calls[0]?.[1]?.body)).toEqual({
+      credDefId: 'definition-a',
+      attributes: [{ name: 'riderId' }, { name: 'deliveryCompany' }, { name: 'riderStatus' }],
+      comment: 'Confirm active delivery-rider status for temporary building access.',
+    });
+    for (const [, init] of transport.mock.calls)
+      expect(init?.headers).toMatchObject({
+        'x-api-key': 'test-only-key',
+        'x-tenant-id': 'building-tenant-test',
+      });
+  });
+
+  it('uses the building tenant for a temporary access offer', async () => {
+    const issuer = new IssuerClient(new LiveEidStackClient(config, transport));
+    await issuer.createTemporaryAccessOffer(
+      'access-schema',
+      'access-definition',
+      {
+        accessId: 'access-1',
+        buildingId: 'building-1',
+        accessScope: 'BUILDING_ENTRY',
+        validFrom: '2026-09-21T00:00:00.000Z',
+        validUntil: '2026-09-21T00:30:00.000Z',
+      },
+      config.verificationTenantId,
+    );
+    expect(transport.mock.calls[0]?.[1]?.headers).toMatchObject({
+      'x-tenant-id': 'building-tenant-test',
+    });
+  });
+
+  it('fails closed before live verifier mutations while proof response fields are unverified', () => {
+    const live = new LiveEidStackAdapter(config, transport);
+    expect(() =>
+      live.createRiderProofRequest({
+        requestId: 'x',
+        credentialDefinitionId: 'd',
+        attributes: [{ name: 'riderId' }],
+        comment: 'x',
+      }),
+    ).toThrow(EidStackError);
+    expect(() => live.getProofStatus('proof')).toThrow(EidStackError);
+    expect(() => live.checkIssuerTrust({ did: 'did:example:issuer' })).toThrow(EidStackError);
+    expect(transport).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['SUCCESS', 'ACCEPTED'],
+    ['INVALID', 'DENIED'],
+    ['REVOKED', 'DENIED'],
+    ['UNTRUSTED', 'DENIED'],
+  ] as const)('keeps mock %s evidence distinct', async (scenario, _decision) => {
+    const mock = new MockEidStackAdapter({ verification: scenario });
+    const request = await mock.createRiderProofRequest({
+      requestId: scenario,
+      credentialDefinitionId: 'mock',
+      attributes: [{ name: 'riderId' }],
+      comment: 'x',
+    });
+    const proof = await mock.getProofStatus(request.proofRecordId);
+    expect(request.invitation).toContain('/proof/');
+    if (scenario === 'INVALID') expect(proof.cryptographicVerification).toBe('FAIL');
+    if (scenario === 'REVOKED') expect(proof.revocation).toBe('REVOKED');
+    if (scenario === 'UNTRUSTED') expect(proof.issuerDid).toBe('did:mock:untrusted');
   });
 });
 

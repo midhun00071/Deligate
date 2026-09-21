@@ -196,3 +196,9 @@ Mock mode may simulate the *completion* of external-wallet steps for development
 13. Revoke rider credential and repeat verification/access test.
 
 Keep only non-secret identifiers in application setup records/logs.
+
+## Macro B verifier/access boundary
+
+The verifier client constructs only the documented request shapes: `POST /verification/createproofRequest`, `GET /verification/proofStatus?proofRecordId=...`, and `GET /trust-registry/check?did=...&schemaId=...`. Every request has the server-only API key and the configured tenant header. The public docs/Swagger do not establish response fields for proof invitation, proof-record identifier, proof cryptographic result, revocation result, or Trust Registry status. Live verification and temporary-access creation therefore stop at `CONTRACT_UNVERIFIED`; they never parse guessed fields or fall back to mock mode.
+
+Mock mode deterministically covers success, invalid proof, revoked credential, untrusted issuer, declined, expired, and upstream failure. Temporary-access offers use only `accessId`, `buildingId`, `accessScope`, `validFrom`, and `validUntil`. Deligate stores its own verification-session-to-access-pass relationship and sends no undocumented eidStack linked/provenance fields.

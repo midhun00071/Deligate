@@ -232,9 +232,11 @@ Infrastructure implementations:
 - `LiveEidStackAdapter` — real server-side HTTPS integration
 
 No application module should branch on raw endpoint details.
-Macro A implements only the issuer port in `packages/eidstack`, wired server-side by
-the Nest eidStack module. Verifier/access capabilities remain future work. Live offer
-parsing is blocked pending authoritative response evidence; see `MACRO_A_LIVE.md`.
+Macro B extends the same port with normalized proof-request, proof-status, trust-check,
+and temporary-access operations. The live verifier builds documented request shapes but
+fails closed before mutation because response identifiers, invitations, proof results,
+revocation, and trust fields are not authoritatively mapped. No live-to-mock fallback
+exists; see `MACRO_A_LIVE.md` and `EIDSTACK.md`.
 
 ## 8. State Machines
 

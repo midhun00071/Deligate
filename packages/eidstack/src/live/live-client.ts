@@ -12,10 +12,9 @@ export class LiveEidStackClient {
     method: 'GET' | 'POST' | 'PATCH',
     path: string,
     body?: unknown,
-    tenantScoped = true,
+    tenantId = this.config.tenantId,
   ): Promise<unknown> {
-    if (!this.config.apiKey || (tenantScoped && !this.config.tenantId))
-      throw new EidStackError('CONFIGURATION_UNAVAILABLE');
+    if (!this.config.apiKey || !tenantId) throw new EidStackError('CONFIGURATION_UNAVAILABLE');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
@@ -25,7 +24,7 @@ export class LiveEidStackClient {
         signal: controller.signal,
         headers: {
           'x-api-key': this.config.apiKey,
-          ...(tenantScoped ? { 'x-tenant-id': this.config.tenantId } : {}),
+          'x-tenant-id': tenantId,
           ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
