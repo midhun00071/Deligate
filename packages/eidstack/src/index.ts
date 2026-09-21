@@ -1,19 +1,9 @@
 export type { EidStackPort } from './ports/eidstack.port';
-
+export * from './types/eidstack.types';
+export * from './config';
+export * from './errors';
+export { validateIssuerInvitation } from './invitation';
 export { LiveEidStackAdapter } from './adapters/live-eidstack.adapter';
 export { MockEidStackAdapter } from './adapters/mock-eidstack.adapter';
-
-export type {
-  CreateProofRequestInput,
-  CreateProofRequestResult,
-  EidStackInvitation,
-  EidStackMode,
-  EidStackOperationStatus,
-  IssueCredentialInput,
-  IssueCredentialResult,
-  LinkedCredentialContext,
-  OperationStatusResult,
-  ProofPredicate,
-  RevokeCredentialInput,
-  VerificationResult,
-} from './types/eidstack.types';
+export { LiveEidStackClient } from './live/live-client';
+export { IssuerClient } from './live/issuer-client';

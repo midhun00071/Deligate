@@ -12,9 +12,10 @@ import { roleLabels } from './paths';
 interface AppShellProps {
   role: AppRole;
   children: ReactNode;
+  statusLabel?: string;
 }
 
-export function AppShell({ role, children }: AppShellProps) {
+export function AppShell({ role, children, statusLabel = 'Sandbox' }: AppShellProps) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [navOpen, setNavOpen] = useState(false);
@@ -38,11 +39,9 @@ export function AppShell({ role, children }: AppShellProps) {
             },
           ]}
         >
-          {!wide ? (
-            <Button label="Menu" variant="ghost" onPress={() => setNavOpen(true)} />
-          ) : null}
+          {!wide ? <Button label="Menu" variant="ghost" onPress={() => setNavOpen(true)} /> : null}
           <Text style={styles.topbarTitle}>{roleLabels[role]}</Text>
-          <StatusBadge label="Sandbox" tone="muted" />
+          <StatusBadge label={statusLabel} tone="muted" />
         </View>
         {children}
       </View>

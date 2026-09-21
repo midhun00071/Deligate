@@ -1,10 +1,10 @@
-import { RoleHomeScreen } from '@/features/dashboard';
+import { DeliveryAdminScreen } from '@/features/issuance/DeliveryAdminScreen';
 import { RoleGate } from '@/features/navigation';
 
 export default function DeliveryAdminRoute() {
   return (
     <RoleGate role="DELIVERY_ADMIN">
-      <RoleHomeScreen role="DELIVERY_ADMIN" />
+      <DeliveryAdminScreen />
     </RoleGate>
   );
 }

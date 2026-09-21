@@ -223,3 +223,17 @@ Deligate follows secure-by-default implementation rules including:
 - explicit separation between credential validity and issuer trust
 
 See `docs/SECURITY.md` for the complete security model.
+# Macro A issuer workflow
+
+Delivery Admin now supports organization-scoped rider records, issuance, status refresh,
+and confirmed revocation. Start with `run.cmd`; use the existing Supabase Delivery Admin
+account and profile. The server persists references and workflow state only.
+
+`EIDSTACK_MODE=mock` visibly simulates wallet completion after ten seconds. The mock
+QR is not usable by the real wallet. `EIDSTACK_MODE=live` currently blocks issuance
+before sending an offer because official docs/Swagger do not specify its response fields.
+See [issuer setup and live blockers](docs/MACRO_A_LIVE.md).
+
+After `pnpm build`, `node scripts/test-issuer-local.cjs` runs the real local Supabase
+Auth/API/database mock flow and removes its isolated fixtures. It refuses remote databases.
+The SQL checks in `supabase/tests/issuer_security.sql` run inside a rolled-back transaction.

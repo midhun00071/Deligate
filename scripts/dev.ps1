@@ -275,6 +275,8 @@ function Invoke-Checks {
 }
 
 function Start-Development {
+  Invoke-Pnpm @('--filter', '@deligate/eidstack', 'build')
+  Invoke-Pnpm @('--filter', '@deligate/validation', 'build')
   Write-Step 'Starting API and Expo development servers (Ctrl+C stops only these foreground processes)'
   $command = Get-PnpmCommand
   $apiCommand = @($command.File) + $command.Prefix + @('--filter', '@deligate/api', 'dev')

@@ -218,12 +218,12 @@ Application services depend on a narrow port:
 
 ```ts
 interface EidStackPort {
+  technicalStatus(): IssuerTechnicalStatus;
+  references(): IssuerReferences;
+  assertIssuanceReady(): void;
   issueRiderCredential(input: IssueRiderInput): Promise<IssuanceResult>;
-  revokeCredential(input: RevokeCredentialInput): Promise<RevocationResult>;
-  createProofRequest(input: RiderProofInput): Promise<ProofRequestResult>;
-  getProofStatus(input: ProofStatusInput): Promise<ProofStatusResult>;
-  checkTrust(input: TrustCheckInput): Promise<TrustCheckResult>;
-  issueTemporaryAccess(input: TemporaryAccessCredentialInput): Promise<IssuanceResult>;
+  getIssuanceStatus(input: ExchangeReference): Promise<IssuerState>;
+  revokeCredential(credentialExchangeId: string): Promise<void>;
 }
 ```
 
@@ -232,13 +232,19 @@ Infrastructure implementations:
 - `LiveEidStackAdapter` — real server-side HTTPS integration
 
 No application module should branch on raw endpoint details.
+Macro A implements only the issuer port in `packages/eidstack`, wired server-side by
+the Nest eidStack module. Verifier/access capabilities remain future work. Live offer
+parsing is blocked pending authoritative response evidence; see `MACRO_A_LIVE.md`.
 
 ## 8. State Machines
 
 ### Credential application state
-`DRAFT -> OFFER_CREATED -> AWAITING_SCAN -> ISSUED`
+Macro A: `REQUESTING -> AWAITING_WALLET -> ISSUED -> REVOKED`.
 
-Failure/terminal states: `DECLINED`, `FAILED`, `REVOKED`.
+Failures are `FAILED` for a known rejection and `UNKNOWN` for an uncertain outcome.
+Supabase persists references/state and atomic audit events. A unique reservation
+prevents repeat issuance; a conditional update locks revocation. Invitations are
+ephemeral server memory only. These are application states, not invented eidStack statuses.
 
 ### Verification state
 `REQUEST_CREATED -> AWAITING_SCAN -> PRESENTATION_RECEIVED -> VERIFYING -> VERIFIED`

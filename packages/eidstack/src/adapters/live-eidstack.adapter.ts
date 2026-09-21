@@ -1,38 +1,67 @@
+import type { EidStackConfig } from '../config';
+import { EidStackError } from '../errors';
+import { IssuerClient } from '../live/issuer-client';
+import { LiveEidStackClient } from '../live/live-client';
 import type { EidStackPort } from '../ports/eidstack.port';
 import type {
-  CreateProofRequestInput,
-  CreateProofRequestResult,
-  IssueCredentialInput,
-  IssueCredentialResult,
-  OperationStatusResult,
-  RevokeCredentialInput,
-  VerificationResult,
+  ExchangeReference,
+  IssueRiderInput,
+  IssuanceResult,
+  IssuerState,
+  IssuerTechnicalStatus,
 } from '../types/eidstack.types';
 
 export class LiveEidStackAdapter implements EidStackPort {
-  private notImplemented(): never {
-    throw new Error(
-      'Live eidStack integration is not implemented. Verify the official sandbox API before adding endpoint-specific behavior.',
-    );
+  private readonly client: IssuerClient;
+
+  constructor(
+    private readonly config: EidStackConfig,
+    transport: typeof fetch = fetch,
+  ) {
+    this.client = new IssuerClient(new LiveEidStackClient(config, transport));
   }
 
-  issueCredential(_input: IssueCredentialInput): Promise<IssueCredentialResult> {
-    return this.notImplemented();
+  technicalStatus(): IssuerTechnicalStatus {
+    return {
+      mode: 'live',
+      hostname: new URL(this.config.baseUrl).hostname,
+      tenantConfigured: Boolean(this.config.tenantId),
+      schemaConfigured: Boolean(this.config.schemaId),
+      credentialDefinitionConfigured: Boolean(this.config.credentialDefinitionId),
+      revocationSupportKnown: this.config.revocationSupported !== null,
+      revocationSupported: this.config.revocationSupported,
+      responseContractVerified: false,
+    };
   }
 
-  getCredentialIssuanceStatus(_credentialExchangeId: string): Promise<OperationStatusResult> {
-    return this.notImplemented();
+  references() {
+    return {
+      schemaId: this.config.schemaId,
+      credentialDefinitionId: this.config.credentialDefinitionId,
+      revocationSupported: this.config.revocationSupported,
+    };
   }
 
-  createProofRequest(_input: CreateProofRequestInput): Promise<CreateProofRequestResult> {
-    return this.notImplemented();
+  assertIssuanceReady(): never {
+    if (!this.config.apiKey || !this.config.tenantId || !this.config.organizationId)
+      throw new EidStackError('CONFIGURATION_UNAVAILABLE');
+    if (!this.config.schemaId || !this.config.credentialDefinitionId)
+      throw new EidStackError('RESOURCES_UNAVAILABLE');
+    // Do not create an orphan offer before its invitation/reference parser can be verified.
+    throw new EidStackError('CONTRACT_UNVERIFIED');
   }
 
-  getVerificationResult(_verificationId: string): Promise<VerificationResult> {
-    return this.notImplemented();
+  issueRiderCredential(_input: IssueRiderInput): Promise<IssuanceResult> {
+    return this.assertIssuanceReady();
   }
 
-  revokeCredential(_input: RevokeCredentialInput): Promise<void> {
-    return this.notImplemented();
+  getIssuanceStatus(_input: ExchangeReference): Promise<IssuerState> {
+    throw new EidStackError('CONTRACT_UNVERIFIED');
+  }
+
+  async revokeCredential(id: string): Promise<void> {
+    if (this.config.revocationSupported !== true) throw new EidStackError('REVOCATION_UNAVAILABLE');
+    // Successful envelope confirms the command, not a fresh ledger-status read.
+    await this.client.revoke(id);
   }
 }

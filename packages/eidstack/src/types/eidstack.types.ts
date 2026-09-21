@@ -1,69 +1,45 @@
 export type EidStackMode = 'mock' | 'live';
+export type IssuerState =
+  'REQUESTING' | 'AWAITING_WALLET' | 'ISSUED' | 'FAILED' | 'UNKNOWN' | 'REVOKED';
 
-export type EidStackOperationStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
-
-export interface EidStackInvitation {
-  invitationUrl?: string;
-  qrPayload?: string;
+export interface RiderClaims {
+  riderId: string;
+  deliveryCompany: string;
+  riderStatus: 'ACTIVE';
+  validFrom: string;
+  validUntil: string;
 }
 
-export interface LinkedCredentialContext {
-  linkGroupId?: string;
-  linkedToCredentialExchangeId?: string;
-  linkType?: string;
-  sourceVerificationId?: string;
-}
-
-export interface IssueCredentialInput {
-  tenantId: string;
+export interface IssuerReferences {
   schemaId: string;
   credentialDefinitionId: string;
-  attributes: Record<string, string>;
-  linkedContext?: LinkedCredentialContext;
+  revocationSupported: boolean | null;
 }
 
-export interface IssueCredentialResult {
+export interface IssueRiderInput {
+  requestId: string;
+  claims: RiderClaims;
+}
+
+export interface IssuanceResult {
   credentialExchangeId: string;
-  status: EidStackOperationStatus;
-  invitation?: EidStackInvitation;
+  state: 'AWAITING_WALLET';
+  invitation: string;
+  source: EidStackMode;
 }
 
-export interface ProofPredicate {
-  attribute: string;
-  operator: string;
-  value: string | number;
-}
-
-export interface CreateProofRequestInput {
-  tenantId: string;
-  schemaId: string;
-  credentialDefinitionId?: string;
-  issuerDid?: string;
-  requestedAttributes: string[];
-  requestedPredicates?: ProofPredicate[];
-  requestNote?: string;
-}
-
-export interface CreateProofRequestResult {
-  verificationId: string;
-  status: EidStackOperationStatus;
-  invitation?: EidStackInvitation;
-}
-
-export interface VerificationResult {
-  verificationId: string;
-  verified: boolean;
-  signatureValid?: boolean;
-  issuerTrusted?: boolean;
-  issuerAttestationValid?: boolean;
-}
-
-export interface RevokeCredentialInput {
-  tenantId: string;
+export interface ExchangeReference {
   credentialExchangeId: string;
+  requestedAt: string;
 }
 
-export interface OperationStatusResult {
-  id: string;
-  status: EidStackOperationStatus;
+export interface IssuerTechnicalStatus {
+  mode: EidStackMode;
+  hostname: string | null;
+  tenantConfigured: boolean;
+  schemaConfigured: boolean;
+  credentialDefinitionConfigured: boolean;
+  revocationSupportKnown: boolean;
+  revocationSupported: boolean | null;
+  responseContractVerified: boolean;
 }

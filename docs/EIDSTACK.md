@@ -1,5 +1,9 @@
 # EIDSTACK.md — Deligate eidStack Integration Notes
 
+Macro A implementation/evidence: see [MACRO_A_LIVE.md](MACRO_A_LIVE.md).
+The live response parser remains blocked: inspected public docs and Swagger expose
+no concrete OOB/status response data fields. Do not infer them from these planning notes.
+
 ## 1. Official Sources
 Primary documentation:
 - https://test.e-idstack.com/docs/

@@ -36,8 +36,12 @@ export function InvitationQrCard({ invitation, pending, error }: InvitationQrCar
   }
 
   const copy = async () => {
-    await Clipboard.setStringAsync(invitation.value);
-    setFeedback('Invitation copied exactly.');
+    try {
+      await Clipboard.setStringAsync(invitation.value);
+      setFeedback('Invitation copied exactly.');
+    } catch {
+      setFeedback('Copying is unavailable. Select the invitation text to copy it.');
+    }
   };
 
   const share = async () => {

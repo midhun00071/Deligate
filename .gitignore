@@ -27,6 +27,7 @@ node_modules/
 web-build/
 apps/mobile/.expo/
 apps/mobile/dist/
+apps/mobile/dist-native/
 apps/mobile/web-build/
 apps/mobile/android/.gradle/
 apps/mobile/android/app/build/

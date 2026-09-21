@@ -1,21 +1,18 @@
 import type {
-  CreateProofRequestInput,
-  CreateProofRequestResult,
-  IssueCredentialInput,
-  IssueCredentialResult,
-  OperationStatusResult,
-  RevokeCredentialInput,
-  VerificationResult,
+  ExchangeReference,
+  IssueRiderInput,
+  IssuanceResult,
+  IssuerReferences,
+  IssuerState,
+  IssuerTechnicalStatus,
 } from '../types/eidstack.types';
 
+/** Issuer capabilities only. No raw transport data or holder operations. */
 export interface EidStackPort {
-  issueCredential(input: IssueCredentialInput): Promise<IssueCredentialResult>;
-
-  getCredentialIssuanceStatus(credentialExchangeId: string): Promise<OperationStatusResult>;
-
-  createProofRequest(input: CreateProofRequestInput): Promise<CreateProofRequestResult>;
-
-  getVerificationResult(verificationId: string): Promise<VerificationResult>;
-
-  revokeCredential(input: RevokeCredentialInput): Promise<void>;
+  technicalStatus(): IssuerTechnicalStatus;
+  references(): IssuerReferences;
+  assertIssuanceReady(): void;
+  issueRiderCredential(input: IssueRiderInput): Promise<IssuanceResult>;
+  getIssuanceStatus(input: ExchangeReference): Promise<IssuerState>;
+  revokeCredential(credentialExchangeId: string): Promise<void>;
 }
