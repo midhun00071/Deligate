@@ -8,14 +8,19 @@ import { colors, layout, spacing } from '@/theme/tokens';
 
 import { ShellNavigation } from './ShellNavigation';
 import { roleLabels } from './paths';
+import type { WorkspaceSection } from './workspace-navigation';
 
 interface AppShellProps {
   role: AppRole;
   children: ReactNode;
+  navigation?: {
+    activeSection: WorkspaceSection;
+    onNavigate: (section: WorkspaceSection) => void;
+  };
   statusLabel?: string;
 }
 
-export function AppShell({ role, children, statusLabel = 'Sandbox' }: AppShellProps) {
+export function AppShell({ role, children, navigation, statusLabel = 'Sandbox' }: AppShellProps) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [navOpen, setNavOpen] = useState(false);
@@ -26,7 +31,13 @@ export function AppShell({ role, children, statusLabel = 'Sandbox' }: AppShellPr
   return (
     <View style={styles.page}>
       {wide ? (
-        <ShellNavigation compactDesktop={compactDesktop} role={role} topInset={topInset} />
+        <ShellNavigation
+          activeSection={navigation?.activeSection}
+          compactDesktop={compactDesktop}
+          onNavigate={navigation?.onNavigate}
+          role={role}
+          topInset={topInset}
+        />
       ) : null}
 
       <View style={styles.main}>
@@ -55,9 +66,14 @@ export function AppShell({ role, children, statusLabel = 'Sandbox' }: AppShellPr
       ) : null}
       {!wide ? (
         <ShellNavigation
+          activeSection={navigation?.activeSection}
           compactDesktop={false}
           drawer
           open={navOpen}
+          onNavigate={(section) => {
+            navigation?.onNavigate(section);
+            setNavOpen(false);
+          }}
           role={role}
           topInset={topInset}
         />

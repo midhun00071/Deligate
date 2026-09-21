@@ -74,9 +74,39 @@ export const riderListSchema = z.object({
 });
 export const issuerOverviewSchema = z.object({
   activeRiders: z.number(),
+  awaitingWallet: z.number(),
   issued: z.number(),
   revoked: z.number(),
   mode: z.enum(['mock', 'live']),
+  recent: z.array(z.object({ id: z.string(), eventType: z.string(), createdAt: z.string() })),
+});
+export const activityQuerySchema = z
+  .object({ page: z.coerce.number().int().min(1).max(1000).default(1), limit: z.coerce.number().int().min(1).max(50).default(20) })
+  .strict();
+export const activityEventSchema = z.object({
+  id: z.string().uuid(),
+  action: z.string().min(1).max(80),
+  target: z.string().min(1).max(80),
+  result: z.enum(['completed', 'pending', 'denied', 'failed']),
+  createdAt: z.string(),
+});
+export const activityPageSchema = z.object({ events: z.array(activityEventSchema), page: z.number(), limit: z.number(), total: z.number() });
+export const technicalStatusSchema = z.object({
+  mode: z.enum(['mock', 'live']),
+  hostname: z.string().nullable(),
+  deliveryTenantConfigured: z.boolean(),
+  buildingTenantConfigured: z.boolean(),
+  riderSchemaConfigured: z.boolean(),
+  riderCredentialDefinitionConfigured: z.boolean(),
+  accessSchemaConfigured: z.boolean(),
+  accessCredentialDefinitionConfigured: z.boolean(),
+  responseContractVerified: z.boolean(),
+});
+export const securityOverviewSchema = z.object({
+  pending: z.number(),
+  accepted: z.number(),
+  denied: z.number(),
+  issuedAccesses: z.number(),
   recent: z.array(z.object({ id: z.string(), eventType: z.string(), createdAt: z.string() })),
 });
 export const revokeInputSchema = z.object({ confirmed: z.literal(true) }).strict();
@@ -87,3 +117,7 @@ export type CredentialRecord = z.infer<typeof credentialSchema>;
 export type RiderDetail = z.infer<typeof riderDetailSchema>;
 export type RiderList = z.infer<typeof riderListSchema>;
 export type IssuerOverview = z.infer<typeof issuerOverviewSchema>;
+export type ActivityQuery = z.infer<typeof activityQuerySchema>;
+export type ActivityPage = z.infer<typeof activityPageSchema>;
+export type TechnicalStatus = z.infer<typeof technicalStatusSchema>;
+export type SecurityOverview = z.infer<typeof securityOverviewSchema>;

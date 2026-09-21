@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { ScrollView, StyleSheet, View, type ScrollViewProps } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ interface ScreenProps {
   safeEdges?: Edge[];
   keyboardDismissMode?: ScrollViewProps['keyboardDismissMode'];
   keyboardShouldPersistTaps?: ScrollViewProps['keyboardShouldPersistTaps'];
+  scrollRef?: Ref<ScrollView>;
 }
 
 export function Screen({
@@ -18,6 +19,7 @@ export function Screen({
   safeEdges = ['top', 'bottom'],
   keyboardDismissMode,
   keyboardShouldPersistTaps,
+  scrollRef,
 }: ScreenProps) {
   const content = <View style={styles.content}>{children}</View>;
 
@@ -28,6 +30,7 @@ export function Screen({
           contentContainerStyle={styles.scroll}
           keyboardDismissMode={keyboardDismissMode}
           keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+          ref={scrollRef}
         >
           {content}
         </ScrollView>

@@ -30,8 +30,12 @@ export class CredentialService {
 
   async issue(actor: AuthenticatedActor, id: string): Promise<RiderDetail> {
     const detail = await this.detail(actor, id);
-    this.assertIssuerScope(detail.rider.organizationId, detail.credential ?? undefined);
-    if (detail.credential) return detail; // Never create a second offer on a retry.
+    const previous = detail.credential;
+    this.assertIssuerScope(
+      detail.rider.organizationId,
+      previous && !this.canReissue(previous) ? previous : undefined,
+    );
+    if (previous && !this.canReissue(previous)) return detail; // Never duplicate a non-terminal offer.
     if (detail.rider.employmentStatus !== 'ACTIVE')
       throw new ConflictException('Only active riders can receive an offer');
     this.issuer.assertIssuanceReady();
@@ -162,5 +166,9 @@ export class CredentialService {
       return {};
     const invitation = this.invitations.get(record.id);
     return invitation ? { invitation } : {};
+  }
+
+  private canReissue(record: CredentialRecord): boolean {
+    return record.state === 'REVOKED' || record.state === 'FAILED';
   }
 }

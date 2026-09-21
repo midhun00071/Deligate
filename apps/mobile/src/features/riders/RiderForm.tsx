@@ -42,11 +42,11 @@ export function RiderForm({
     >
       <View style={{ gap: spacing.md }}>
         <Field
-          label="Employee reference"
+          label="Internal rider reference"
           value={reference}
           maxLength={64}
           onChangeText={setReference}
-          hint="Use an internal reference. Do not enter a national ID or contact details."
+          hint="Use a company rider identifier, for example RIDER-001. Do not enter Emirates ID, phone, email or other unnecessary identity data."
           error={error}
         />
         <Text style={type.small}>Application employment status</Text>

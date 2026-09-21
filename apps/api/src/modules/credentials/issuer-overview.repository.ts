@@ -10,12 +10,18 @@ export class IssuerOverviewRepository {
   constructor(@Inject(SUPABASE_ADMIN_CLIENT) private readonly db: SupabaseClient) {}
 
   async read(org: string, mode: EidStackMode) {
-    const [riders, issued, revoked, events] = await Promise.all([
+    const [riders, awaitingWallet, issued, revoked, events] = await Promise.all([
       this.db
         .from('riders')
         .select('id', { head: true, count: 'exact' })
         .eq('employer_organization_id', org)
         .eq('employment_status', 'ACTIVE'),
+      this.db
+        .from('credential_records')
+        .select('id', { head: true, count: 'exact' })
+        .eq('issuer_organization_id', org)
+        .eq('source_mode', mode)
+        .eq('issuer_state', 'AWAITING_WALLET'),
       this.db
         .from('credential_records')
         .select('id', { head: true, count: 'exact' })
@@ -37,13 +43,14 @@ export class IssuerOverviewRepository {
         .order('created_at', { ascending: false })
         .limit(5),
     ]);
-    if ([riders, issued, revoked, events].some((result) => result.error))
+    if ([riders, awaitingWallet, issued, revoked, events].some((result) => result.error))
       throw new ServiceUnavailableException('Issuer overview unavailable');
     const rows = z
       .array(z.object({ id: z.string(), event_type: z.string(), created_at: z.string() }))
       .parse(events.data ?? []);
     return issuerOverviewSchema.parse({
       activeRiders: riders.count ?? 0,
+      awaitingWallet: awaitingWallet.count ?? 0,
       issued: issued.count ?? 0,
       revoked: revoked.count ?? 0,
       mode,

@@ -7,6 +7,7 @@ import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { VerificationController } from './verification.controller';
 import { VerificationService } from './verification.service';
+import { SecurityOverviewRepository } from './security-overview.repository';
 
 const actor = {
   userId: 'user-1',
@@ -32,12 +33,18 @@ describe('Security building selection endpoint', () => {
           provide: VerificationService,
           useValue: { buildings: jest.fn().mockResolvedValue(buildings) },
         },
+        {
+          provide: SecurityOverviewRepository,
+          useValue: { read: jest.fn() },
+        },
       ],
     }).compile();
     app = module.createNestApplication();
     await app.init();
   });
-  afterEach(async () => app.close());
+  afterEach(async () => {
+    if (app) await app.close();
+  });
 
   it('returns only the authenticated security organization building choices', async () => {
     await request(app.getHttpServer())

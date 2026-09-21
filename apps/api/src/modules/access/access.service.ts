@@ -22,7 +22,7 @@ export class AccessService {
   async issue(
     actor: AuthenticatedActor,
     verificationId: string,
-    input: AccessInput,
+    _input: AccessInput,
   ): Promise<TemporaryAccess> {
     const org = this.scope(actor);
     const session = await this.verifications.find(org, verificationId);

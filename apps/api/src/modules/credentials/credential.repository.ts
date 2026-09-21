@@ -26,6 +26,8 @@ export class CredentialRepository {
       .eq('rider_id', riderId)
       .eq('kind', 'VERIFIED_RIDER')
       .not('issuer_state', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (error) throw new ServiceUnavailableException('Credential lookup unavailable');
     return data ? mapCredential(data) : null;

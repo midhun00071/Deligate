@@ -51,6 +51,21 @@ describe('issuer workflow', () => {
     expect(credentialRepo.reserve).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps revoked history and creates a distinct replacement credential for the same rider', async () => {
+    const { service, getCredentials } = await setup();
+    const first = await service.issue(actor, rider.id);
+    await service.refresh(actor, rider.id);
+    await service.revoke(actor, rider.id);
+
+    const replacement = await service.issue(actor, rider.id);
+    const history = getCredentials();
+
+    expect(first.credential?.id).not.toBe(replacement.credential?.id);
+    expect(history).toHaveLength(2);
+    expect(history[0]).toMatchObject({ id: first.credential?.id, state: 'REVOKED' });
+    expect(history[1]).toMatchObject({ id: replacement.credential?.id, state: 'AWAITING_WALLET' });
+  });
+
   it('does not create another offer on repeated or concurrent requests', async () => {
     const { service, adapter } = await setup();
     const issue = jest.spyOn(adapter, 'issueRiderCredential');
@@ -141,14 +156,12 @@ describe('issuer workflow', () => {
     const { service, adapter, riderRepo } = await setup();
     riderRepo.find.mockResolvedValueOnce({ ...rider, employmentStatus: 'SUSPENDED' });
     await expect(service.issue(actor, rider.id)).rejects.toThrow(/Only active riders/);
-    jest
-      .spyOn(adapter, 'issueRiderCredential')
-      .mockResolvedValue({
-        source: 'live',
-        state: 'AWAITING_WALLET',
-        credentialExchangeId: 'foreign',
-        invitation: 'https://wallet.example/exact',
-      });
+    jest.spyOn(adapter, 'issueRiderCredential').mockResolvedValue({
+      source: 'live',
+      state: 'AWAITING_WALLET',
+      credentialExchangeId: 'foreign',
+      invitation: 'https://wallet.example/exact',
+    });
     await expect(service.issue(actor, rider.id)).rejects.toMatchObject({
       code: 'INVALID_RESPONSE',
     });

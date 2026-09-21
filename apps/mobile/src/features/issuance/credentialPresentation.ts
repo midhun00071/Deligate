@@ -24,3 +24,7 @@ export function canRevoke(record: CredentialRecord | null): boolean {
     record?.state === 'ISSUED' && record.revocationSupported === true && !record.revocationPending
   );
 }
+
+export function canIssueCredential(record: CredentialRecord | null): boolean {
+  return record === null || record.state === 'REVOKED' || record.state === 'FAILED';
+}

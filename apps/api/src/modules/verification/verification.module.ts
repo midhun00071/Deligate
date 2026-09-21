@@ -6,11 +6,12 @@ import { VerificationController } from './verification.controller';
 import { VerificationInvitationCache } from './verification-invitation-cache';
 import { VerificationRepository } from './verification.repository';
 import { VerificationService } from './verification.service';
+import { SecurityOverviewRepository } from './security-overview.repository';
 
 @Module({
   imports: [AuthModule, SupabaseModule, EidStackModule],
   controllers: [VerificationController],
-  providers: [VerificationRepository, VerificationInvitationCache, VerificationService],
+  providers: [VerificationRepository, VerificationInvitationCache, VerificationService, SecurityOverviewRepository],
   exports: [VerificationService, VerificationRepository],
 })
 export class VerificationModule {}

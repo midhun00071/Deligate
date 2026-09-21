@@ -18,13 +18,23 @@ import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
 import { IssuerErrorFilter } from '../credentials/issuer-error.filter';
 import { VerificationInputPipe } from './verification.dto';
 import { VerificationService } from './verification.service';
+import { SecurityOverviewRepository } from './security-overview.repository';
 
 @Controller('security/verifications')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles('BUILDING_SECURITY')
 @UseFilters(IssuerErrorFilter)
 export class VerificationController {
-  constructor(private readonly verifications: VerificationService) {}
+  constructor(
+    private readonly verifications: VerificationService,
+    private readonly overviewRepository: SecurityOverviewRepository,
+  ) {}
+
+  @Get('overview')
+  @Header('Cache-Control', 'no-store')
+  getOverview(@CurrentActor() actor: AuthenticatedActor) {
+    return this.overviewRepository.read(actor.organizationId!);
+  }
 
   @Get('buildings')
   @Header('Cache-Control', 'no-store')

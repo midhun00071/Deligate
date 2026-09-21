@@ -162,13 +162,26 @@ A failed live eidStack request must never silently fall back to mock success.
 
 ## Local Development
 
-On Windows, use the single normal entry point:
+On Windows, use the single normal entry point after installing Git, Docker Desktop, and Node.js 22 or newer:
 
-    run.cmd
+    git clone <repository-url>
+    cd Deligate
+    .\run.cmd
 
-It verifies Node.js, the repository-pinned pnpm, and Docker; starts or reuses local Supabase without resetting data; applies pending local migrations; and starts the NestJS and Expo development servers. It creates `.env` files from their examples only when absent, then fills blank template values or replaces known local defaults. Existing `EIDSTACK_*`, custom values, and unrelated settings are never changed.
+The runner verifies the exact repository pnpm, repairs an incomplete local dependency store once when required tools are missing, starts Docker Desktop when it is installed but stopped, starts or reuses local Supabase without resetting data, applies pending migrations, and seeds idempotent local demo records. It creates missing `.env` files without replacing user-managed values. The seed refuses every non-local Supabase URL.
 
-`run.cmd` detects an active LAN IPv4 address for Expo's public API and Supabase URLs, so a device on the same network can connect. If detection is not reliable it safely uses loopback and warns instead. Use `run.cmd --check` for the non-watching validation suite.
+Use the commands below for the normal setup and diagnostics:
+
+    .\run.cmd
+    .\run.cmd --doctor
+    .\run.cmd --check
+    .\run.cmd --lan-ip <IPv4>
+
+`--doctor` does not start watch processes. It reports tool, Docker, local Supabase, LAN, generated-URL, and port readiness without printing credentials. `--check` is non-destructive and runs whitespace, lint, typecheck, build, and local Supabase schema checks. The runner chooses an active physical Wi-Fi interface ahead of Ethernet and excludes loopback, Docker, WSL, Hyper-V, and link-local adapters; use `--lan-ip` when that choice is unsuitable.
+
+For a physical device, put the phone and laptop on the same reachable network, open Expo Go (and sign in if it asks), then scan the Expo LAN QR. The API listens on the selected LAN address while development is running. Local development creates or updates only these demo accounts: `delivery.admin@deligate.local` and `building.security@deligate.local`. Their shared local-only password is `DeligateDemo2026!`; it must never be used outside local Supabase. The seed never creates the legacy `security@deligate.local` account.
+
+The default mode is `EIDSTACK_MODE=mock`, which simulates the external wallet only at the server adapter boundary. Deligate is not a holder wallet. Live mode requires these server-only environment variable names: `EIDSTACK_API_KEY`, `EIDSTACK_DELIVERY_TENANT_ID`, `EIDSTACK_BUILDING_TENANT_ID`, `EIDSTACK_DELIVERY_ORGANIZATION_ID`, `EIDSTACK_RIDER_SCHEMA_ID`, `EIDSTACK_RIDER_CREDENTIAL_DEFINITION_ID`, `EIDSTACK_ACCESS_SCHEMA_ID`, and `EIDSTACK_ACCESS_CREDENTIAL_DEFINITION_ID`. An incomplete live configuration fails; it never falls back to mock. Concrete live response parsing remains fail-closed until it is verified with the organizer wallet and authoritative sandbox responses.
 
 The Expo app is one universal Android, iOS, and web client. Its eventual web dashboards use desktop-appropriate density while native remains touch-first; API clients, auth state, hooks, and domain logic remain shared.
 
@@ -223,6 +236,7 @@ Deligate follows secure-by-default implementation rules including:
 - explicit separation between credential validity and issuer trust
 
 See `docs/SECURITY.md` for the complete security model.
+
 # Macro A issuer workflow
 
 Delivery Admin now supports organization-scoped rider records, issuance, status refresh,

@@ -22,7 +22,8 @@ export const rider: Rider = {
 /** Test persistence only. Production always uses Supabase repositories. */
 export function issuerRepositories() {
   const riders = new Map<string, Rider>([[rider.id, { ...rider }]]);
-  let credential: CredentialRecord | null = null;
+  const credentials: CredentialRecord[] = [];
+  const latestCredential = () => credentials.at(-1) ?? null;
   const riderRepo = {
     assertDeliveryCompany: jest.fn(async (_org: string) => {}),
     find: jest.fn(async (org: string, id: string) => {
@@ -35,8 +36,10 @@ export function issuerRepositories() {
         .filter((value) => value.organizationId === org)
         .map((value) => ({
           ...value,
-          credentialState: credential?.riderId === value.id ? credential.state : null,
-          credentialSource: credential?.riderId === value.id ? credential.source : null,
+          credentialState:
+            latestCredential()?.riderId === value.id ? latestCredential()?.state : null,
+          credentialSource:
+            latestCredential()?.riderId === value.id ? latestCredential()?.source : null,
         })),
       total: riders.size,
       page: query.page,
@@ -62,7 +65,7 @@ export function issuerRepositories() {
   };
   const credentialRepo = {
     find: jest.fn(async (org: string, id: string) =>
-      org === rider.organizationId && id === rider.id ? credential : null,
+      org === rider.organizationId && id === rider.id ? latestCredential() : null,
     ),
     reserve: jest.fn(
       async (
@@ -73,9 +76,11 @@ export function issuerRepositories() {
         refs: IssuerReferences,
         validUntil: string,
       ) => {
-        if (credential) throw new ConflictException();
-        credential = {
-          id: '40000000-0000-4000-8000-000000000001',
+        const current = latestCredential();
+        if (current && !['REVOKED', 'FAILED'].includes(current.state))
+          throw new ConflictException();
+        const credential: CredentialRecord = {
+          id: `40000000-0000-4000-8000-${String(credentials.length + 1).padStart(12, '0')}`,
           riderId,
           source,
           ...refs,
@@ -88,11 +93,14 @@ export function issuerRepositories() {
           errorCode: null,
           revocationPending: false,
         };
+        credentials.push(credential);
         return credential;
       },
     ),
     update: jest.fn(
       async (_org: string, record: CredentialRecord, _actor: string, patch: CredentialPatch) => {
+        const index = credentials.findIndex((value) => value.id === record.id);
+        const credential = credentials[index];
         if (
           !credential ||
           credential.state !== record.state ||
@@ -100,14 +108,19 @@ export function issuerRepositories() {
         )
           throw new ConflictException();
         const { exchangeId, ...fields } = patch;
-        credential = {
+        credentials[index] = {
           ...credential,
           ...fields,
           ...(exchangeId ? { credentialExchangeId: exchangeId } : {}),
         };
-        return credential;
+        return credentials[index];
       },
     ),
   };
-  return { riderRepo, credentialRepo, getCredential: () => credential };
+  return {
+    riderRepo,
+    credentialRepo,
+    getCredential: latestCredential,
+    getCredentials: () => [...credentials],
+  };
 }

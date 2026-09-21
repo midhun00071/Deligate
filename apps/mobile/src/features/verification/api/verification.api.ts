@@ -8,18 +8,27 @@ import { authenticatedJson } from '@/lib/api';
 
 export async function createVerification(input: VerificationInput): Promise<VerificationSession> {
   return verificationSessionSchema.parse(
-    await authenticatedJson('/security/verifications', 'POST', input),
+    await authenticatedJson('/api/security/verifications', 'POST', input),
   );
 }
 
 export async function listSecurityBuildings() {
   return securityBuildingListSchema.parse(
-    await authenticatedJson('/security/verifications/buildings'),
+    await authenticatedJson('/api/security/verifications/buildings'),
   );
 }
 
 export async function refreshVerification(id: string): Promise<VerificationSession> {
   return verificationSessionSchema.parse(
-    await authenticatedJson(`/security/verifications/${encodeURIComponent(id)}/refresh`, 'POST'),
+    await authenticatedJson(
+      `/api/security/verifications/${encodeURIComponent(id)}/refresh`,
+      'POST',
+    ),
+  );
+}
+
+export async function getVerification(id: string): Promise<VerificationSession> {
+  return verificationSessionSchema.parse(
+    await authenticatedJson(`/api/security/verifications/${encodeURIComponent(id)}`),
   );
 }

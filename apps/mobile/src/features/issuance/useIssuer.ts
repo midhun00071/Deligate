@@ -9,13 +9,14 @@ import type {
 import { ApiRequestError } from '@/lib/api/errors';
 import { issuerApi } from './issuer.api';
 
-export function useIssuer() {
+export function useIssuer(selectedRiderId?: string) {
   const [list, setList] = useState<RiderList | null>(null);
   const [overview, setOverview] = useState<IssuerOverview | null>(null);
   const [detail, setDetail] = useState<RiderDetail | null>(null);
   const [query, setQuery] = useState<RiderQuery>({ page: 1, limit: 20, search: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activityVersion, setActivityVersion] = useState(0);
   const generation = useRef(0);
   const running = useRef(false);
 
@@ -67,18 +68,24 @@ export function useIssuer() {
     }
   }, []);
 
-  const select = (id: string) =>
-    run(async () => {
-      generation.current += 1;
-      setDetail(null);
-      setDetail(await issuerApi.detail(id));
-    });
+  const select = useCallback(
+    (id: string) =>
+      run(async () => {
+        const selected = generation.current + 1;
+        generation.current = selected;
+        setDetail(null);
+        const next = await issuerApi.detail(id);
+        if (generation.current === selected) setDetail(next);
+      }),
+    [run],
+  );
 
   const refreshList = () =>
     run(async () => {
       const { nextList, nextOverview } = await load();
       setList(nextList);
       setOverview(nextOverview);
+      setActivityVersion((value) => value + 1);
     });
 
   const save = (input: RiderInput, id?: string) =>
@@ -108,9 +115,14 @@ export function useIssuer() {
         const { nextList, nextOverview } = await load();
         setList(nextList);
         setOverview(nextOverview);
+        setActivityVersion((value) => value + 1);
       }),
     [detail, load, run],
   );
+
+  useEffect(() => {
+    if (selectedRiderId) void select(selectedRiderId);
+  }, [selectedRiderId, select]);
 
   return {
     list,
@@ -120,6 +132,7 @@ export function useIssuer() {
     setQuery,
     busy,
     error,
+    activityVersion,
     select,
     save,
     action,

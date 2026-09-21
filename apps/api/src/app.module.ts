@@ -7,6 +7,7 @@ import { HealthModule } from './modules/health/health.module';
 import { RiderModule } from './modules/riders/rider.module';
 import { VerificationModule } from './modules/verification/verification.module';
 import { AccessModule } from './modules/access/access.module';
+import { ActivityModule } from './modules/activity/activity.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AccessModule } from './modules/access/access.module';
     RiderModule,
     VerificationModule,
     AccessModule,
+    ActivityModule,
   ],
 })
 export class AppModule {}

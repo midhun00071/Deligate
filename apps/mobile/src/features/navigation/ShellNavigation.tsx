@@ -6,21 +6,26 @@ import { useAuth } from '@/features/auth';
 import { colors, layout, radii, spacing, type } from '@/theme/tokens';
 
 import { roleLabels } from './paths';
+import { workspaceNavigationItems, type WorkspaceSection } from './workspace-navigation';
 
 interface ShellNavigationProps {
-  role: AppRole;
+  activeSection?: WorkspaceSection;
   compactDesktop: boolean;
-  topInset: number;
   drawer?: boolean;
+  onNavigate?: (section: WorkspaceSection) => void;
   open?: boolean;
+  role: AppRole;
+  topInset: number;
 }
 
 export function ShellNavigation({
-  role,
+  activeSection = 'overview',
   compactDesktop,
-  topInset,
   drawer = false,
+  onNavigate,
   open = false,
+  role,
+  topInset,
 }: ShellNavigationProps) {
   const { actor, signOut } = useAuth();
 
@@ -43,18 +48,15 @@ export function ShellNavigation({
       {!compactDesktop ? <Text style={styles.workspace}>{roleLabels[role]}</Text> : null}
 
       <View style={styles.links}>
-        <NavItem active compact={compactDesktop} label="Overview" />
-        <NavItem
-          compact={compactDesktop}
-          label={
-            role === 'DELIVERY_ADMIN'
-              ? 'Rider records'
-              : role === 'BUILDING_SECURITY'
-                ? 'Verification desk'
-                : 'Account status'
-          }
-        />
-        <NavItem compact={compactDesktop} label="Activity" />
+        {workspaceNavigationItems(role).map((item) => (
+          <NavItem
+            key={item.id}
+            active={item.id === activeSection}
+            compact={compactDesktop}
+            label={item.label}
+            onPress={() => onNavigate?.(item.id)}
+          />
+        ))}
       </View>
 
       <View style={[styles.user, compactDesktop && styles.compactUser]}>
@@ -86,23 +88,27 @@ export function ShellNavigation({
 }
 
 function NavItem({
-  label,
   active,
   compact,
+  label,
+  onPress,
 }: {
-  label: string;
   active?: boolean;
   compact: boolean;
+  label: string;
+  onPress: () => void;
 }) {
   return (
-    <View
+    <Pressable
       accessibilityLabel={label}
+      accessibilityRole="button"
       accessibilityState={{ selected: active }}
+      onPress={onPress}
       style={[styles.navItem, compact && styles.compactNavItem, active && styles.navActive]}
     >
       <Text style={styles.navMark}>{compact ? label.slice(0, 1) : '—'}</Text>
       {!compact ? <Text style={styles.navText}>{label}</Text> : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -116,9 +122,7 @@ const styles = StyleSheet.create({
     width: layout.desktopSidebar,
     zIndex: 2,
   },
-  compactSidebar: {
-    width: layout.compactSidebar,
-  },
+  compactSidebar: { width: layout.compactSidebar },
   drawer: {
     bottom: 0,
     left: 0,
@@ -127,26 +131,11 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -280 }],
     width: 262,
   },
-  drawerOpen: {
-    transform: [{ translateX: 0 }],
-  },
-  brand: {
-    ...type.title,
-    fontSize: 19,
-  },
-  compactBrand: {
-    alignSelf: 'center',
-    fontSize: 20,
-  },
-  workspace: {
-    ...type.small,
-    marginTop: 3,
-  },
-  links: {
-    flex: 1,
-    gap: 4,
-    marginTop: spacing.xl,
-  },
+  drawerOpen: { transform: [{ translateX: 0 }] },
+  brand: { ...type.title, fontSize: 19 },
+  compactBrand: { alignSelf: 'center', fontSize: 20 },
+  workspace: { ...type.small, marginTop: 3 },
+  links: { flex: 1, gap: 4, marginTop: spacing.xl },
   navItem: {
     alignItems: 'center',
     borderRadius: radii.base,
@@ -155,44 +144,18 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingHorizontal: 10,
   },
-  compactNavItem: {
-    justifyContent: 'center',
-    paddingHorizontal: 0,
-  },
-  navActive: {
-    backgroundColor: colors.muted,
-  },
-  navMark: {
-    color: colors.inkMuted,
-    fontSize: 14,
-  },
-  navText: {
-    color: colors.inkSecondary,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  user: {
-    borderTopColor: colors.line,
-    borderTopWidth: 1,
-    paddingTop: spacing.sm,
-  },
-  compactUser: {
-    alignItems: 'center',
-  },
-  name: {
-    color: colors.inkSecondary,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
+  compactNavItem: { justifyContent: 'center', paddingHorizontal: 0 },
+  navActive: { backgroundColor: colors.muted },
+  navMark: { color: colors.inkMuted, fontSize: 14 },
+  navText: { color: colors.inkSecondary, fontSize: 13, fontWeight: '500' },
+  user: { borderTopColor: colors.line, borderTopWidth: 1, paddingTop: spacing.sm },
+  compactUser: { alignItems: 'center' },
+  name: { color: colors.inkSecondary, fontSize: 13, fontWeight: '600', marginBottom: 4 },
   compactSignOut: {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: Platform.OS === 'web' ? 36 : 44,
     minWidth: Platform.OS === 'web' ? 36 : 44,
   },
-  compactSignOutLabel: {
-    color: colors.inkMuted,
-    fontSize: 18,
-  },
+  compactSignOutLabel: { color: colors.inkMuted, fontSize: 18 },
 });

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import type { RiderDetail } from '@deligate/validation';
 import { Button, Card, Dialog, StatusBadge } from '@/components/ui';
 import { InvitationQrCard, validateInvitationValue } from '@/features/qr';
 import { spacing, type } from '@/theme/tokens';
-import { canRevoke, credentialLabel } from './credentialPresentation';
+import { canIssueCredential, canRevoke, credentialLabel } from './credentialPresentation';
 
 export function RiderDetailPanel({
   detail,
@@ -20,7 +20,11 @@ export function RiderDetailPanel({
   onAction: (action: 'issuance' | 'refresh' | 'revoke') => Promise<boolean>;
 }) {
   const [confirm, setConfirm] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const record = detail.credential;
+  useEffect(() => {
+    if (record?.state === 'AWAITING_WALLET') setShowQr(true);
+  }, [record?.state]);
   let invitation;
   try {
     if (detail.invitation && record)
@@ -76,19 +80,21 @@ export function RiderDetailPanel({
           style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.md }}
         >
           <Button label="Edit rider" variant="secondary" disabled={busy} onPress={onEdit} />
-          {!record ? (
+          {canIssueCredential(record) ? (
             <Button
-              label="Issue rider credential"
+              label={record ? 'Issue new credential' : 'Issue rider credential'}
               disabled={busy || detail.rider.employmentStatus !== 'ACTIVE'}
               onPress={() => void onAction('issuance')}
             />
           ) : null}
-          <Button
-            label="Refresh state"
-            variant="secondary"
-            disabled={busy}
-            onPress={() => void onAction('refresh')}
-          />
+          {record ? (
+            <Button
+              label="Refresh state"
+              variant="secondary"
+              disabled={busy}
+              onPress={() => void onAction('refresh')}
+            />
+          ) : null}
           {canRevoke(record) ? (
             <Button
               label="Revoke credential"
@@ -100,14 +106,24 @@ export function RiderDetailPanel({
         </View>
       </Card>
       {record?.state === 'AWAITING_WALLET' ? (
-        <InvitationQrCard
-          invitation={invitation}
-          error={
-            !invitation
-              ? 'The invitation is unavailable in this server session. It is not stored in the database. Contact the technical operator; do not create a duplicate offer.'
-              : undefined
-          }
-        />
+        <View style={{ gap: spacing.sm }}>
+          <Button
+            label={showQr ? 'Hide credential QR' : 'Show QR again'}
+            variant="secondary"
+            disabled={busy}
+            onPress={() => setShowQr((visible) => !visible)}
+          />
+          {showQr ? (
+            <InvitationQrCard
+              invitation={invitation}
+              error={
+                !invitation
+                  ? 'The invitation is unavailable in this server session. It is not stored in the database. Contact the technical operator; do not create a duplicate offer.'
+                  : undefined
+              }
+            />
+          ) : null}
+        </View>
       ) : null}
       <Dialog
         visible={confirm}
