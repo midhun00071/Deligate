@@ -1,5 +1,6 @@
 import type { EidStackConfig } from '../config';
 import { EidStackError } from '../errors';
+import { validateIssuerInvitation } from '../invitation';
 import { IssuerClient } from '../live/issuer-client';
 import { LiveEidStackClient } from '../live/live-client';
 import { VerificationClient } from '../live/verification-client';
@@ -39,7 +40,7 @@ export class LiveEidStackAdapter implements EidStackPort {
       credentialDefinitionConfigured: Boolean(this.config.credentialDefinitionId),
       revocationSupportKnown: this.config.revocationSupported !== null,
       revocationSupported: this.config.revocationSupported,
-      responseContractVerified: false,
+      responseContractVerified: true,
     };
   }
 
@@ -51,21 +52,28 @@ export class LiveEidStackAdapter implements EidStackPort {
     };
   }
 
-  assertIssuanceReady(): never {
+  assertIssuanceReady(): void {
     if (!this.config.apiKey || !this.config.tenantId || !this.config.organizationId)
       throw new EidStackError('CONFIGURATION_UNAVAILABLE');
     if (!this.config.schemaId || !this.config.credentialDefinitionId)
       throw new EidStackError('RESOURCES_UNAVAILABLE');
-    // Do not create an orphan offer before its invitation/reference parser can be verified.
-    throw new EidStackError('CONTRACT_UNVERIFIED');
   }
 
-  issueRiderCredential(_input: IssueRiderInput): Promise<IssuanceResult> {
-    return this.assertIssuanceReady();
+  async issueRiderCredential(input: IssueRiderInput): Promise<IssuanceResult> {
+    this.assertIssuanceReady();
+    const response = await this.client.createRiderOffer(
+      this.config.credentialDefinitionId,
+      input.claims,
+    );
+    return parseRiderOffer(response);
   }
 
-  getIssuanceStatus(_input: ExchangeReference): Promise<IssuerState> {
-    throw new EidStackError('CONTRACT_UNVERIFIED');
+  async getIssuanceStatus(input: ExchangeReference): Promise<IssuerState> {
+    this.assertIssuanceReady();
+    return parseOfferStatus(
+      await this.client.offerStatus(input.credentialExchangeId),
+      input.credentialExchangeId,
+    );
   }
 
   async revokeCredential(id: string): Promise<void> {
@@ -87,7 +95,13 @@ export class LiveEidStackAdapter implements EidStackPort {
   }
 
   issueTemporaryAccessCredential(_input: IssueTemporaryAccessInput): Promise<IssuanceResult> {
-    if (!this.config.accessSchemaId || !this.config.accessCredentialDefinitionId)
+    if (
+      !this.config.apiKey ||
+      !this.config.verificationTenantId ||
+      !this.config.buildingOrganizationId ||
+      !this.config.accessSchemaId ||
+      !this.config.accessCredentialDefinitionId
+    )
       throw new EidStackError('RESOURCES_UNAVAILABLE');
     throw new EidStackError('CONTRACT_UNVERIFIED');
   }
@@ -104,4 +118,50 @@ export class LiveEidStackAdapter implements EidStackPort {
     // fields have no authoritative response schema. Do not create orphan proof records.
     throw new EidStackError('CONTRACT_UNVERIFIED');
   }
+}
+
+function parseRiderOffer(value: unknown): IssuanceResult {
+  const data = responseData(value);
+  const shortUrl = data.shortUrl;
+  const exchange = data.credentialExchange;
+  if (
+    !isNonEmptyString(shortUrl) ||
+    !isNonEmptyString(data.invitationUrl) ||
+    !isNonEmptyString(data.outOfBandId) ||
+    !isRecord(exchange) ||
+    !isNonEmptyString(exchange.id) ||
+    exchange.state !== 'offer-sent'
+  )
+    throw new EidStackError('CONTRACT_UNVERIFIED');
+  return {
+    credentialExchangeId: exchange.id,
+    state: 'AWAITING_WALLET',
+    invitation: validateIssuerInvitation(shortUrl),
+    source: 'live',
+  };
+}
+
+function parseOfferStatus(value: unknown, credentialExchangeId: string): IssuerState {
+  const data = responseData(value);
+  if (
+    !isNonEmptyString(data.credentialExchangeId) ||
+    data.credentialExchangeId !== credentialExchangeId
+  )
+    throw new EidStackError('CONTRACT_UNVERIFIED');
+  if (data.state === 'offer-sent') return 'AWAITING_WALLET';
+  if (data.state === 'credential-issued') return 'ISSUED';
+  throw new EidStackError('CONTRACT_UNVERIFIED');
+}
+
+function responseData(value: unknown): Record<string, unknown> {
+  if (!isRecord(value) || !isRecord(value.data)) throw new EidStackError('CONTRACT_UNVERIFIED');
+  return value.data;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
 }

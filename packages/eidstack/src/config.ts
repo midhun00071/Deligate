@@ -8,6 +8,7 @@ export interface EidStackConfig extends IssuerReferences {
   tenantId: string;
   timeoutMs: number;
   organizationId: string;
+  buildingOrganizationId: string;
   verificationTenantId: string;
   accessSchemaId: string;
   accessCredentialDefinitionId: string;
@@ -50,6 +51,7 @@ export function readEidStackConfig(env: Record<string, string | undefined>): Eid
     apiKey: env.EIDSTACK_API_KEY ?? '',
     tenantId: env.EIDSTACK_DELIVERY_TENANT_ID ?? '',
     organizationId: env.EIDSTACK_DELIVERY_ORGANIZATION_ID ?? '',
+    buildingOrganizationId: env.EIDSTACK_BUILDING_ORGANIZATION_ID ?? '',
     verificationTenantId: env.EIDSTACK_BUILDING_TENANT_ID ?? '',
     schemaId: env.EIDSTACK_RIDER_SCHEMA_ID ?? '',
     credentialDefinitionId: env.EIDSTACK_RIDER_CREDENTIAL_DEFINITION_ID ?? '',

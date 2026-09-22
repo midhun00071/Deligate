@@ -47,7 +47,7 @@ describe('Delivery Admin direct HTTP requests', () => {
         },
         {
           provide: EIDSTACK_PORT,
-          useValue: new MockEidStackAdapter({ now: () => Date.now() + 11000 }),
+          useValue: new MockEidStackAdapter(),
         },
         { provide: EIDSTACK_CONFIG, useValue: readEidStackConfig({ EIDSTACK_MODE: 'mock' }) },
       ],

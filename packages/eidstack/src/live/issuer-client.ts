@@ -1,4 +1,4 @@
-import type { RiderClaims, TemporaryAccessClaims } from '../types/eidstack.types';
+import type { RiderOfferClaims, TemporaryAccessClaims } from '../types/eidstack.types';
 import { LiveEidStackClient } from './live-client';
 
 /** Verified against official docs and Swagger on 2026-09-21.
@@ -30,16 +30,16 @@ export class IssuerClient {
     });
   }
 
-  createOffer(schemaId: string, credentialDefinitionId: string, attributes: RiderClaims) {
+  createRiderOffer(credentialDefinitionId: string, attributes: RiderOfferClaims) {
     return this.http.request('POST', '/issuance/oob-offer', {
-      schemaId,
       credentialDefinitionId,
-      attributes,
-      subjectAttribute: 'riderId',
-      useConnection: false,
-      autoAcceptCredential: false,
-      comment: 'Delivery rider employment credential. Review and accept in your holder wallet.',
-      category: 'employment',
+      attributes: [
+        { name: 'riderId', value: attributes.riderId },
+        { name: 'deliveryCompany', value: attributes.deliveryCompany },
+        { name: 'riderStatus', value: attributes.riderStatus },
+      ],
+      autoAcceptCredential: true,
+      comment: '',
     });
   }
 

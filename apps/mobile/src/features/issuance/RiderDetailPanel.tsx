@@ -45,7 +45,7 @@ export function RiderDetailPanel({
           <>
             <Text style={type.small}>
               {record.source === 'mock'
-                ? 'Simulation: wallet completion is simulated after 10 seconds. This QR cannot issue a real credential.'
+                ? 'Mock source: credential delivery is not confirmed in this mode.'
                 : 'Live eidStack source'}
             </Text>
             <Text style={type.small}>

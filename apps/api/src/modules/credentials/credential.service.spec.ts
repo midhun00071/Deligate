@@ -13,9 +13,13 @@ import { RiderService } from '../riders/rider.service';
 import { EIDSTACK_CONFIG, EIDSTACK_PORT } from '../eidstack/eidstack.module';
 import { actor, issuerRepositories, rider } from '../../../test/issuer.fixture';
 
-async function setup(
-  adapter: EidStackPort = new MockEidStackAdapter({ now: () => Date.now() + 11000 }),
-) {
+function confirmedAdapter(): EidStackPort {
+  const adapter = new MockEidStackAdapter();
+  jest.spyOn(adapter, 'getIssuanceStatus').mockResolvedValue('ISSUED');
+  return adapter;
+}
+
+async function setup(adapter: EidStackPort = confirmedAdapter()) {
   const repos = issuerRepositories();
   const config = readEidStackConfig({ EIDSTACK_MODE: 'mock' });
   const module = await Test.createTestingModule({
@@ -74,6 +78,21 @@ describe('issuer workflow', () => {
     expect(issue).toHaveBeenCalledTimes(1);
   });
 
+  it('constructs minimal rider claims from the selected application record', async () => {
+    const { service, adapter } = await setup();
+    const issue = jest.spyOn(adapter, 'issueRiderCredential');
+    await service.issue(actor, rider.id);
+    expect(issue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        claims: expect.objectContaining({
+          riderId: rider.id,
+          deliveryCompany: rider.organizationId,
+          riderStatus: 'ACTIVE',
+        }),
+      }),
+    );
+  });
+
   it('persists a definite issuance failure and surfaces the error', async () => {
     const { service, getCredential } = await setup(new MockEidStackAdapter({ fail: 'issue' }));
     await expect(service.issue(actor, rider.id)).rejects.toBeInstanceOf(EidStackError);
@@ -129,6 +148,15 @@ describe('issuer workflow', () => {
     const issue = jest.spyOn(adapter, 'issueRiderCredential');
     await expect(service.issue({ ...actor, organizationId: 'other' }, rider.id)).rejects.toThrow();
     await expect(service.issue({ ...actor, role: 'RIDER' }, rider.id)).rejects.toThrow();
+    expect(issue).not.toHaveBeenCalled();
+  });
+
+  it('rejects a different delivery organization in live mode before adapter calls', async () => {
+    const { service, adapter, config } = await setup();
+    config.mode = 'live';
+    config.organizationId = rider.organizationId;
+    const issue = jest.spyOn(adapter, 'issueRiderCredential');
+    await expect(service.issue({ ...actor, organizationId: 'other' }, rider.id)).rejects.toThrow();
     expect(issue).not.toHaveBeenCalled();
   });
 

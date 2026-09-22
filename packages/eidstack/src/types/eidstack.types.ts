@@ -10,6 +10,8 @@ export interface RiderClaims {
   validUntil: string;
 }
 
+export type RiderOfferClaims = Pick<RiderClaims, 'riderId' | 'deliveryCompany' | 'riderStatus'>;
+
 export interface IssuerReferences {
   schemaId: string;
   credentialDefinitionId: string;

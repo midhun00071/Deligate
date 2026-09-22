@@ -49,6 +49,10 @@ playwright-report/
 .cache/
 .tmp/
 
+# Local eidStack live bootstrap references (never secrets)
+.deligate/eidstack-live-state.json
+.deligate/eidstack-live-state.json.tmp
+
 # Supabase local files
 supabase/.branches/
 supabase/.temp/

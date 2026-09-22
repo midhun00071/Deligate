@@ -1,8 +1,13 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
-import { EidStackError, validateIssuerInvitation, type EidStackPort } from '@deligate/eidstack';
+import {
+  EidStackError,
+  validateIssuerInvitation,
+  type EidStackConfig,
+  type EidStackPort,
+} from '@deligate/eidstack';
 import type { AuthenticatedActor } from '@deligate/types';
 import type { VerificationInput, VerificationSession } from '@deligate/validation';
-import { EIDSTACK_PORT } from '../eidstack/eidstack.module';
+import { EIDSTACK_CONFIG, EIDSTACK_PORT } from '../eidstack/eidstack.module';
 import { decideVerification, unavailableDecision } from './domain/verification-decision';
 import { riderProofPolicy } from './domain/rider-proof-policy';
 import { VerificationInvitationCache } from './verification-invitation-cache';
@@ -14,6 +19,7 @@ export class VerificationService {
     private readonly repository: VerificationRepository,
     private readonly invitations: VerificationInvitationCache,
     @Inject(EIDSTACK_PORT) private readonly eidstack: EidStackPort,
+    @Inject(EIDSTACK_CONFIG) private readonly config: EidStackConfig,
   ) {}
 
   async create(actor: AuthenticatedActor, input: VerificationInput): Promise<VerificationSession> {
@@ -93,6 +99,12 @@ export class VerificationService {
   private scope(actor: AuthenticatedActor): string {
     if (actor.role !== 'BUILDING_SECURITY' || !actor.organizationId)
       throw new ForbiddenException('Building security organization required');
+    if (
+      this.config.mode === 'live' &&
+      (!this.config.buildingOrganizationId ||
+        actor.organizationId !== this.config.buildingOrganizationId)
+    )
+      throw new ForbiddenException('This organization has no configured verifier tenant');
     return actor.organizationId;
   }
 

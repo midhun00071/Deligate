@@ -77,6 +77,12 @@ export class AccessService {
   private scope(actor: AuthenticatedActor): string {
     if (actor.role !== 'BUILDING_SECURITY' || !actor.organizationId)
       throw new ForbiddenException('Building security organization required');
+    if (
+      this.config.mode === 'live' &&
+      (!this.config.buildingOrganizationId ||
+        actor.organizationId !== this.config.buildingOrganizationId)
+    )
+      throw new ForbiddenException('This organization has no configured access issuer tenant');
     return actor.organizationId;
   }
 

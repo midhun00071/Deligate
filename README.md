@@ -160,6 +160,23 @@ Live mode must be enabled explicitly after authorized sandbox credentials are pr
 
 A failed live eidStack request must never silently fall back to mock success.
 
+### eidStack live bootstrap
+
+With `EIDSTACK_API_KEY` set only in the shell/server environment, inspect or create the two
+live eidStack roles without editing `.env`:
+
+    pnpm eidstack:live status
+    pnpm eidstack:live bootstrap
+    pnpm eidstack:live configure-local
+
+`status` performs only `GET` requests. `bootstrap` tracks public tenant, DID, schema,
+credential-definition, and revocation-registry references in the gitignored
+`.deligate/eidstack-live-state.json`; it never writes API keys, seeds, wallets, credentials,
+proofs, or tokens. It uses `EIDSTACK_BASE_URL` when supplied, otherwise the sandbox base URL.
+`configure-local` refuses remote Supabase URLs, reuses the same bootstrap recovery logic, resolves
+the two seeded local application organizations, and atomically writes only safe eidStack role
+references and organization bindings to `.env`; it never writes an API key or tenant seed.
+
 ## Local Development
 
 On Windows, use the single normal entry point after installing Git, Docker Desktop, and Node.js 22 or newer:
@@ -181,7 +198,7 @@ Use the commands below for the normal setup and diagnostics:
 
 For a physical device, put the phone and laptop on the same reachable network, open Expo Go (and sign in if it asks), then scan the Expo LAN QR. The API listens on the selected LAN address while development is running. Local development creates or updates only these demo accounts: `delivery.admin@deligate.local` and `building.security@deligate.local`. Their shared local-only password is `DeligateDemo2026!`; it must never be used outside local Supabase. The seed never creates the legacy `security@deligate.local` account.
 
-The default mode is `EIDSTACK_MODE=mock`, which simulates the external wallet only at the server adapter boundary. Deligate is not a holder wallet. Live mode requires these server-only environment variable names: `EIDSTACK_API_KEY`, `EIDSTACK_DELIVERY_TENANT_ID`, `EIDSTACK_BUILDING_TENANT_ID`, `EIDSTACK_DELIVERY_ORGANIZATION_ID`, `EIDSTACK_RIDER_SCHEMA_ID`, `EIDSTACK_RIDER_CREDENTIAL_DEFINITION_ID`, `EIDSTACK_ACCESS_SCHEMA_ID`, and `EIDSTACK_ACCESS_CREDENTIAL_DEFINITION_ID`. An incomplete live configuration fails; it never falls back to mock. Concrete live response parsing remains fail-closed until it is verified with the organizer wallet and authoritative sandbox responses.
+The default mode is `EIDSTACK_MODE=mock`, which simulates the external wallet only at the server adapter boundary. Deligate is not a holder wallet. Live mode requires these server-only environment variable names: `EIDSTACK_API_KEY`, `EIDSTACK_DELIVERY_TENANT_ID`, `EIDSTACK_BUILDING_TENANT_ID`, `EIDSTACK_DELIVERY_ORGANIZATION_ID`, `EIDSTACK_BUILDING_ORGANIZATION_ID`, `EIDSTACK_RIDER_SCHEMA_ID`, `EIDSTACK_RIDER_CREDENTIAL_DEFINITION_ID`, `EIDSTACK_ACCESS_SCHEMA_ID`, and `EIDSTACK_ACCESS_CREDENTIAL_DEFINITION_ID`. Rider OOB offers use the proven short URL and exchange-ID response fields; incomplete live configuration or unverified response fields fail explicitly without a mock fallback.
 
 The Expo app is one universal Android, iOS, and web client. Its eventual web dashboards use desktop-appropriate density while native remains touch-first; API clients, auth state, hooks, and domain logic remain shared.
 

@@ -16,7 +16,7 @@ import type {
 
 export interface MockIssuerOptions {
   fail?: 'issue' | 'status' | 'revoke';
-  outcome?: 'ISSUED' | 'FAILED' | 'AWAITING_WALLET';
+  /** Test clock for mock proof-state scenarios; never used for issuance promotion. */
   now?: () => number;
   verification?:
     'SUCCESS' | 'INVALID' | 'REVOKED' | 'UNTRUSTED' | 'DECLINED' | 'EXPIRED' | 'FAILURE';
@@ -61,12 +61,9 @@ export class MockEidStackAdapter implements EidStackPort {
     });
   }
 
-  getIssuanceStatus(input: ExchangeReference): Promise<IssuerState> {
+  getIssuanceStatus(_input: ExchangeReference): Promise<IssuerState> {
     if (this.options.fail === 'status') throw new EidStackError('UPSTREAM_UNAVAILABLE');
-    const elapsed = (this.options.now ?? Date.now)() - Date.parse(input.requestedAt);
-    return Promise.resolve(
-      elapsed >= 10000 ? (this.options.outcome ?? 'ISSUED') : 'AWAITING_WALLET',
-    );
+    return Promise.resolve('AWAITING_WALLET');
   }
 
   revokeCredential(_id: string): Promise<void> {

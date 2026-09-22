@@ -8,7 +8,6 @@ import {
   validateIssuerInvitation,
   VerificationClient,
 } from '@deligate/eidstack';
-
 const config = readEidStackConfig({
   EIDSTACK_MODE: 'live',
   EIDSTACK_API_KEY: 'test-only-key',
@@ -26,7 +25,6 @@ const claims = {
   validFrom: '2026-09-21T00:00:00.000Z',
   validUntil: '2026-12-20T00:00:00.000Z',
 };
-
 describe('documented live issuer request contracts', () => {
   let transport: jest.MockedFunction<typeof fetch>;
   let client: IssuerClient;
@@ -36,9 +34,8 @@ describe('documented live issuer request contracts', () => {
       .mockImplementation(() => Promise.resolve(Response.json({ success: true, data: {} })));
     client = new IssuerClient(new LiveEidStackClient(config, transport));
   });
-
-  it('constructs the documented OOB request with server-only headers and minimal claims', async () => {
-    await client.createOffer('schema-a', 'definition-a', claims);
+  it('constructs the proven rider OOB request with server-only headers and minimal claims', async () => {
+    await client.createRiderOffer('definition-a', claims);
     const [url, init] = transport.mock.calls[0];
     expect(url).toBe('https://test.e-idstack.com/api/v1/issuance/oob-offer');
     expect(init).toMatchObject({
@@ -51,17 +48,16 @@ describe('documented live issuer request contracts', () => {
       },
     });
     expect(parseBody(init?.body)).toEqual({
-      schemaId: 'schema-a',
       credentialDefinitionId: 'definition-a',
-      attributes: claims,
-      subjectAttribute: 'riderId',
-      useConnection: false,
-      autoAcceptCredential: false,
-      comment: 'Delivery rider employment credential. Review and accept in your holder wallet.',
-      category: 'employment',
+      attributes: [
+        { name: 'riderId', value: claims.riderId },
+        { name: 'deliveryCompany', value: claims.deliveryCompany },
+        { name: 'riderStatus', value: 'ACTIVE' },
+      ],
+      autoAcceptCredential: true,
+      comment: '',
     });
   });
-
   it('creates a revocation-capable definition explicitly and a minimal schema only when called', async () => {
     expect(transport).not.toHaveBeenCalled();
     await client.createSchema();
@@ -83,7 +79,6 @@ describe('documented live issuer request contracts', () => {
       supportRevocation: true,
     });
   });
-
   it('uses documented status/revoke routes, encodes references and supplies tenant headers', async () => {
     await client.offerStatus('exchange/a');
     await client.revoke('exchange/a');
@@ -101,7 +96,7 @@ describe('documented live issuer request contracts', () => {
     'sanitizes upstream %s and never retries mutations',
     async (status) => {
       transport.mockResolvedValue(new Response('secret invitation raw credential', { status }));
-      await expect(client.createOffer('s', 'd', claims)).rejects.toThrow(EidStackError);
+      await expect(client.createRiderOffer('d', claims)).rejects.toThrow(EidStackError);
       expect(transport).toHaveBeenCalledTimes(1);
     },
   );
@@ -140,17 +135,101 @@ describe('documented live issuer request contracts', () => {
     expect(transport).not.toHaveBeenCalled();
   });
 
-  it('blocks live issuance before mutation when response fields are unverified', () => {
+  it('maps the exact short URL and exchange reference from a live rider offer', async () => {
     const live = new LiveEidStackAdapter(config, transport);
-    expect(() => live.issueRiderCredential({ requestId: 'r', claims })).toThrow(
-      /verified sandbox response/,
+    transport.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: {
+          shortUrl: 'https://test.e-idstack.com/s/short-offer',
+          invitationUrl: 'https://test.e-idstack.com/oob?long=invitation',
+          outOfBandId: 'out-of-band-1',
+          credentialExchange: {
+            id: 'exchange-1',
+            state: 'offer-sent',
+            role: 'issuer',
+            protocolVersion: 'v2',
+            autoAcceptCredential: 'always',
+          },
+        },
+      }),
     );
-    expect(() =>
-      live.getIssuanceStatus({ credentialExchangeId: 'x', requestedAt: claims.validFrom }),
-    ).toThrow(EidStackError);
-    expect(transport).not.toHaveBeenCalled();
+    await expect(live.issueRiderCredential({ requestId: 'r', claims })).resolves.toEqual({
+      source: 'live',
+      state: 'AWAITING_WALLET',
+      credentialExchangeId: 'exchange-1',
+      invitation: 'https://test.e-idstack.com/s/short-offer',
+    });
     expect(JSON.stringify(live.technicalStatus())).not.toContain('test-only-key');
-    expect(live.technicalStatus()).toMatchObject({ mode: 'live', responseContractVerified: false });
+    expect(live.technicalStatus()).toMatchObject({ mode: 'live', responseContractVerified: true });
+  });
+
+  it('fails closed for malformed live offer/status responses and upstream failures', async () => {
+    const live = new LiveEidStackAdapter(config, transport);
+    transport.mockResolvedValueOnce(
+      Response.json({ success: true, data: { shortUrl: 'https://x' } }),
+    );
+    await expect(live.issueRiderCredential({ requestId: 'r', claims })).rejects.toMatchObject({
+      code: 'CONTRACT_UNVERIFIED',
+    });
+    for (const data of [
+      {
+        invitationUrl: 'https://test.e-idstack.com/oob?long=invitation',
+        outOfBandId: 'out-of-band-1',
+        credentialExchange: { id: 'exchange-1', state: 'offer-sent' },
+      },
+      {
+        shortUrl: 'https://test.e-idstack.com/s/short-offer',
+        invitationUrl: 'https://test.e-idstack.com/oob?long=invitation',
+        outOfBandId: 'out-of-band-1',
+        credentialExchange: { id: 'exchange-1', state: 'credential-issued' },
+      },
+    ]) {
+      transport.mockResolvedValueOnce(Response.json({ success: true, data }));
+      await expect(live.issueRiderCredential({ requestId: 'r', claims })).rejects.toMatchObject({
+        code: 'CONTRACT_UNVERIFIED',
+      });
+    }
+    transport.mockResolvedValueOnce(new Response('unavailable', { status: 503 }));
+    await expect(live.issueRiderCredential({ requestId: 'r', claims })).rejects.toMatchObject({
+      code: 'UPSTREAM_UNAVAILABLE',
+    });
+    transport.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: { credentialExchangeId: 'exchange-1', state: 'offer-sent' },
+      }),
+    );
+    await expect(
+      live.getIssuanceStatus({ credentialExchangeId: 'exchange-1', requestedAt: claims.validFrom }),
+    ).resolves.toBe('AWAITING_WALLET');
+    transport.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: { credentialExchangeId: 'exchange-1', state: 'credential-issued' },
+      }),
+    );
+    await expect(
+      live.getIssuanceStatus({ credentialExchangeId: 'exchange-1', requestedAt: claims.validFrom }),
+    ).resolves.toBe('ISSUED');
+    transport.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: { credentialExchangeId: 'exchange-1', state: 'request-received' },
+      }),
+    );
+    await expect(
+      live.getIssuanceStatus({ credentialExchangeId: 'exchange-1', requestedAt: claims.validFrom }),
+    ).rejects.toMatchObject({ code: 'CONTRACT_UNVERIFIED' });
+    transport.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: { credentialExchangeId: 'other-exchange', state: 'credential-issued' },
+      }),
+    );
+    await expect(
+      live.getIssuanceStatus({ credentialExchangeId: 'exchange-1', requestedAt: claims.validFrom }),
+    ).rejects.toMatchObject({ code: 'CONTRACT_UNVERIFIED' });
   });
 
   it('live revoke errors stay errors and success requires the documented envelope', async () => {
@@ -165,8 +244,8 @@ describe('documented live issuer request contracts', () => {
 });
 
 describe('mock and invitation boundary', () => {
-  it('deterministically simulates the same offer and wallet completion', async () => {
-    const adapter = new MockEidStackAdapter({ now: () => Date.parse(claims.validFrom) + 10001 });
+  it('keeps mock offers awaiting wallet delivery without a timer transition', async () => {
+    const adapter = new MockEidStackAdapter();
     const input = { requestId: 'same', claims };
     expect(await adapter.issueRiderCredential(input)).toEqual(
       await adapter.issueRiderCredential(input),
@@ -176,22 +255,16 @@ describe('mock and invitation boundary', () => {
         credentialExchangeId: 'mock-same',
         requestedAt: claims.validFrom,
       }),
-    ).toBe('ISSUED');
+    ).toBe('AWAITING_WALLET');
     expect(adapter.technicalStatus().mode).toBe('mock');
   });
-  it('supports explicit failures and a never-completing simulation', async () => {
+  it('supports explicit failures without simulating credential delivery', async () => {
     expect(() =>
       new MockEidStackAdapter({ fail: 'issue' }).issueRiderCredential({ requestId: 'x', claims }),
     ).toThrow(EidStackError);
     expect(() => new MockEidStackAdapter({ fail: 'revoke' }).revokeCredential('x')).toThrow(
       EidStackError,
     );
-    expect(
-      await new MockEidStackAdapter({ outcome: 'AWAITING_WALLET' }).getIssuanceStatus({
-        credentialExchangeId: 'x',
-        requestedAt: claims.validFrom,
-      }),
-    ).toBe('AWAITING_WALLET');
   });
   it('preserves exact invitation bytes and rejects unsafe invitations', () => {
     const invitation = 'https://wallet.example/?_oob=A%2fb%3D&x=AbC';
